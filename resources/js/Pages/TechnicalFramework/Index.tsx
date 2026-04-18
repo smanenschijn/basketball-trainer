@@ -257,7 +257,7 @@ export default function Index({ framework, ageGroups, exercisesByAgeGroup }: Pro
                                                 {selectedExercises.map((exercise) => (
                                                     <li key={exercise.id}>
                                                         <Link
-                                                            href={route('exercises.show', exercise.id)}
+                                                            href={`${route('exercises.show', exercise.slug)}?from=framework`}
                                                             className="block px-4 py-3 transition hover:bg-gray-50"
                                                         >
                                                             <p className="text-sm font-bold text-brand-black">

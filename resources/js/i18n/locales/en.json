@@ -37,7 +37,14 @@
     "verifyEmailTitle": "Email Verification",
     "verifyEmailDescription": "Thanks for signing up! Before getting started, could you verify your email address by clicking on the link we just emailed to you? If you didn't receive the email, we will gladly send you another.",
     "verificationLinkSent": "A new verification link has been sent to the email address you provided during registration.",
-    "resendVerificationEmail": "Resend Verification Email"
+    "resendVerificationEmail": "Resend Verification Email",
+    "requestAccess": "Request access",
+    "requestAccessDescription": "Enter your email address to request access. An administrator will review your request and you'll receive an email with instructions to set up your password.",
+    "submitRequest": "Submit Request",
+    "backToLogin": "Back to login",
+    "registrationSubmitted": "Your registration request has been submitted. You will receive an email once an administrator has approved your request.",
+    "setupPassword": "Set Password",
+    "setupPasswordDescription": "Set a password for your account ({{email}}) to complete your registration."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -87,6 +94,7 @@
     "viewDetails": "View Details",
     "instruction": "Instruction",
     "backToLibrary": "Back to Library",
+    "backToFramework": "Back to Framework",
     "noMaterials": "No materials needed",
     "editExercise": "Edit Exercise",
     "ageGroups": "Age Groups",
@@ -139,5 +147,18 @@
     "dashboard": "Dashboard",
     "logIn": "Log in",
     "register": "Register"
+  },
+  "admin": {
+    "registrationRequests": "Registration Requests",
+    "status": "Status",
+    "requestedAt": "Requested",
+    "actions": "Actions",
+    "noRequests": "No registration requests yet.",
+    "approve": "Approve",
+    "reject": "Reject",
+    "approvedBy": "Approved by {{name}}",
+    "status_pending": "Pending",
+    "status_approved": "Approved",
+    "status_rejected": "Rejected"
   }
 }

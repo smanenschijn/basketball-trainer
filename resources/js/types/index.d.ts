@@ -3,6 +3,7 @@ export interface User {
     name: string;
     email: string;
     email_verified_at?: string;
+    is_admin: boolean;
 }
 
 export interface Material {
@@ -20,6 +21,7 @@ export interface AgeGroup {
 
 export interface Exercise {
     id: number;
+    slug: string;
     title: string;
     description: string;
     explanation: string;

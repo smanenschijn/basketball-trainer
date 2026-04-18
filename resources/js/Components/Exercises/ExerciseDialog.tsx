@@ -79,7 +79,7 @@ export default function ExerciseDialog({
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
         if (isEditing) {
-            put(route('exercises.update', exercise.id), {
+            put(route('exercises.update', exercise.slug), {
                 onSuccess: () => handleClose(),
             });
         } else {

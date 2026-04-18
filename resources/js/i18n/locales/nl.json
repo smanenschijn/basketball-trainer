@@ -37,7 +37,14 @@
     "verifyEmailTitle": "E-mail verificatie",
     "verifyEmailDescription": "Bedankt voor je registratie! Kun je je e-mailadres verifi\u00ebren door op de link te klikken die we je zojuist hebben gemaild? Als je de e-mail niet hebt ontvangen, sturen we je graag een nieuwe.",
     "verificationLinkSent": "Er is een nieuwe verificatielink verstuurd naar het e-mailadres dat je bij registratie hebt opgegeven.",
-    "resendVerificationEmail": "Verificatie-e-mail opnieuw versturen"
+    "resendVerificationEmail": "Verificatie-e-mail opnieuw versturen",
+    "requestAccess": "Toegang aanvragen",
+    "requestAccessDescription": "Vul je e-mailadres in om toegang aan te vragen. Een beheerder beoordeelt je aanvraag en je ontvangt een e-mail met instructies om je wachtwoord in te stellen.",
+    "submitRequest": "Aanvraag versturen",
+    "backToLogin": "Terug naar inloggen",
+    "registrationSubmitted": "Je registratieaanvraag is verstuurd. Je ontvangt een e-mail zodra een beheerder je aanvraag heeft goedgekeurd.",
+    "setupPassword": "Wachtwoord instellen",
+    "setupPasswordDescription": "Stel een wachtwoord in voor je account ({{email}}) om je registratie te voltooien."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -87,6 +94,7 @@
     "viewDetails": "Bekijk details",
     "instruction": "Instructie",
     "backToLibrary": "Terug naar bibliotheek",
+    "backToFramework": "Terug naar kader",
     "noMaterials": "Geen materialen nodig",
     "editExercise": "Oefening bewerken",
     "ageGroups": "Leeftijdsgroepen",
@@ -139,5 +147,18 @@
     "dashboard": "Dashboard",
     "logIn": "Inloggen",
     "register": "Registreren"
+  },
+  "admin": {
+    "registrationRequests": "Registratieaanvragen",
+    "status": "Status",
+    "requestedAt": "Aangevraagd",
+    "actions": "Acties",
+    "noRequests": "Nog geen registratieaanvragen.",
+    "approve": "Goedkeuren",
+    "reject": "Afwijzen",
+    "approvedBy": "Goedgekeurd door {{name}}",
+    "status_pending": "In afwachting",
+    "status_approved": "Goedgekeurd",
+    "status_rejected": "Afgewezen"
   }
 }

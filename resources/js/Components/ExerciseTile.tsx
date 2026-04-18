@@ -82,7 +82,7 @@ export default function ExerciseTile({ exercise }: Props) {
                 )}
 
                 <Link
-                    href={route('exercises.show', exercise.id)}
+                    href={`${route('exercises.show', exercise.slug)}${window.location.search}`}
                     className="mt-auto inline-flex items-center gap-2 self-start bg-brand-gold px-4 py-2 text-xs font-black uppercase tracking-wider text-brand-black transition hover:bg-yellow-400"
                 >
                     <PlayIcon />

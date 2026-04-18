@@ -278,6 +278,7 @@ class ExerciseSeeder extends Seeder
             $exercise = Exercise::create([
                 'user_id' => $user->id,
                 'title' => $data['title'],
+                'slug' => Str::slug($data['title']),
                 'description' => $data['description'],
                 'explanation' => $data['explanation'],
                 'youtube_url' => 'https://www.youtube.com/watch?v=jg6C7fJdUrc',

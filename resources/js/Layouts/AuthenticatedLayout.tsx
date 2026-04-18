@@ -49,6 +49,7 @@ const SessionsIcon = () => (
 export default function Authenticated({ children }: PropsWithChildren) {
     const { t } = useTranslation();
     const auth = (usePage().props as any).auth;
+    const pendingRegistrationCount = (usePage().props as any).pendingRegistrationCount ?? 0;
     const user = auth?.user;
     const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false);
 
@@ -96,6 +97,11 @@ export default function Authenticated({ children }: PropsWithChildren) {
                                             className="inline-flex items-center rounded-full border-3 border-gray-600 bg-gray-800 px-3 py-2 text-sm text-gray-300 transition hover:text-white"
                                         >
                                             {user.name}
+                                            {user.is_admin && pendingRegistrationCount > 0 && (
+                                                <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-xs font-bold leading-none text-white">
+                                                    {pendingRegistrationCount}
+                                                </span>
+                                            )}
                                             <svg className="-me-0.5 ms-2 h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                                                 <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                                             </svg>
@@ -103,6 +109,11 @@ export default function Authenticated({ children }: PropsWithChildren) {
                                     </Dropdown.Trigger>
                                     <Dropdown.Content>
                                         <Dropdown.Link href={route('profile.edit')}>{t('nav.profile')}</Dropdown.Link>
+                                        {user?.is_admin && (
+                                            <Dropdown.Link href={route('admin.registration-requests.index')}>
+                                                {t('admin.registrationRequests')}
+                                            </Dropdown.Link>
+                                        )}
                                         <Dropdown.Link href={route('logout')} method="post" as="button">{t('nav.logOut')}</Dropdown.Link>
                                     </Dropdown.Content>
                                 </Dropdown>
@@ -142,11 +153,23 @@ export default function Authenticated({ children }: PropsWithChildren) {
                         {user && (
                         <>
                         <div className="px-4">
-                            <div className="text-base font-medium text-white">{user.name}</div>
+                            <div className="flex items-center text-base font-medium text-white">
+                                {user.name}
+                                {user.is_admin && pendingRegistrationCount > 0 && (
+                                    <span className="ml-2 inline-flex items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-xs font-bold leading-none text-white">
+                                        {pendingRegistrationCount}
+                                    </span>
+                                )}
+                            </div>
                             <div className="text-sm font-medium text-gray-400">{user.email}</div>
                         </div>
                         <div className="mt-3 space-y-1">
                             <ResponsiveNavLink href={route('profile.edit')}>{t('nav.profile')}</ResponsiveNavLink>
+                            {user?.is_admin && (
+                                <ResponsiveNavLink href={route('admin.registration-requests.index')}>
+                                    {t('admin.registrationRequests')}
+                                </ResponsiveNavLink>
+                            )}
                             <ResponsiveNavLink method="post" href={route('logout')} as="button">{t('nav.logOut')}</ResponsiveNavLink>
                         </div>
                         </>

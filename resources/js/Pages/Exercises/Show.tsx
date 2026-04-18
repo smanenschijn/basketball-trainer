@@ -2,7 +2,7 @@ import ExerciseDialog from '@/Components/Exercises/ExerciseDialog';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Exercise, AgeGroup } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 interface Props {
@@ -60,9 +60,28 @@ export default function Show({ exercise, ageGroups }: Props) {
     const ageLabels = exercise.age_groups?.map((ag) => ag.label).join(', ') || '-';
     const videoId = exercise.youtube_url ? extractYouTubeId(exercise.youtube_url) : null;
 
+    const backLink = useMemo(() => {
+        const params = new URLSearchParams(window.location.search);
+        const from = params.get('from');
+        if (from === 'framework') {
+            return { href: route('technical-framework.index'), label: t('exercises.backToFramework') };
+        }
+        // Preserve filter params when navigating back to the exercise library
+        const filterParams = new URLSearchParams();
+        ['search', 'age_group_id', 'duration', 'material_id', 'page'].forEach((key) => {
+            const value = params.get(key);
+            if (value) filterParams.set(key, value);
+        });
+        const query = filterParams.toString();
+        return {
+            href: route('exercises.index') + (query ? `?${query}` : ''),
+            label: t('exercises.backToLibrary'),
+        };
+    }, [t]);
+
     const handleDelete = () => {
         if (confirm(t('exercises.confirmDelete'))) {
-            router.delete(route('exercises.destroy', exercise.id));
+            router.delete(route('exercises.destroy', exercise.slug));
         }
     };
 
@@ -73,11 +92,11 @@ export default function Show({ exercise, ageGroups }: Props) {
             <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
                 {/* Back link */}
                 <Link
-                    href={route('exercises.index')}
+                    href={backLink.href}
                     className="mb-6 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-gray-600 transition hover:text-brand-black"
                 >
                     <ArrowLeftIcon />
-                    {t('exercises.backToLibrary')}
+                    {backLink.label}
                 </Link>
 
                 {/* Two-column layout */}
