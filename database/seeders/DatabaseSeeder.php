@@ -18,8 +18,14 @@ class DatabaseSeeder extends Seeder
         // User::factory(10)->create();
 
         User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+            'name' => 'Admin',
+            'email' => 'admin@basketball-trainer.local',
+        ]);
+
+        $this->call([
+            AgeGroupSeeder::class,
+            MaterialSeeder::class,
+            ExerciseSeeder::class,
         ]);
     }
 }

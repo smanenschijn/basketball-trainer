@@ -15,6 +15,22 @@ export default {
             fontFamily: {
                 sans: ['Figtree', ...defaultTheme.fontFamily.sans],
             },
+            colors: {
+                brand: {
+                    gold: '#F5B800',
+                    'gold-dark': '#D4A000',
+                    black: '#1A1A1A',
+                    cream: '#FFF8E7',
+                    'cream-dark': '#FFF0CC',
+                },
+            },
+            boxShadow: {
+                brutal: '4px 4px 0 0 #1A1A1A',
+                'brutal-sm': '2px 2px 0 0 #1A1A1A',
+            },
+            borderWidth: {
+                3: '3px',
+            },
         },
     },
 
