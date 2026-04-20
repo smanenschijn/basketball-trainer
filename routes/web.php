@@ -2,12 +2,15 @@
 
 use App\Http\Controllers\Admin\RegistrationRequestController as AdminRegistrationRequestController;
 use App\Http\Controllers\Auth\SetupPasswordController;
+use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\ExerciseController;
 use App\Http\Controllers\ExerciseImageController;
 use App\Http\Controllers\MaterialController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RegistrationRequestController;
+use App\Http\Controllers\SessionController;
 use App\Http\Controllers\TechnicalFrameworkController;
+use App\Http\Controllers\TrainingDayController;
 use App\Models\Exercise;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -17,8 +20,12 @@ Route::get('/', function () {
 });
 
 Route::get('/dashboard', function () {
+    $user = request()->user();
+
     return Inertia::render('Dashboard', [
         'exerciseCount' => Exercise::count(),
+        'sessionCount' => $user->sessions()->count(),
+        'totalTrainingMinutes' => (int) $user->sessions()->sum('duration_minutes'),
     ]);
 })->middleware('auth')->name('dashboard');
 
@@ -39,6 +46,23 @@ Route::middleware('auth')->group(function () {
     Route::get('/technical-framework', [TechnicalFrameworkController::class, 'index'])->name('technical-framework.index');
     Route::post('/technical-framework/upload', [TechnicalFrameworkController::class, 'upload'])->name('technical-framework.upload');
     Route::get('/technical-framework/pdf', [TechnicalFrameworkController::class, 'pdf'])->name('technical-framework.pdf');
+
+    // Calendar
+    Route::get('/calendar', [CalendarController::class, 'index'])->name('calendar.index');
+    Route::post('/calendar/assign', [CalendarController::class, 'assign'])->name('calendar.assign');
+    Route::delete('/calendar/{assignment}', [CalendarController::class, 'unassign'])->name('calendar.unassign');
+    Route::put('/calendar/{assignment}/move', [CalendarController::class, 'move'])->name('calendar.move');
+    Route::put('/training-days', [TrainingDayController::class, 'update'])->name('training-days.update');
+
+    // Sessions
+    Route::get('/sessions', [SessionController::class, 'index'])->name('sessions.index');
+    Route::post('/sessions', [SessionController::class, 'store'])->name('sessions.store');
+    Route::get('/sessions/{session}', [SessionController::class, 'show'])->name('sessions.show');
+    Route::put('/sessions/{session}', [SessionController::class, 'update'])->name('sessions.update');
+    Route::delete('/sessions/{session}', [SessionController::class, 'destroy'])->name('sessions.destroy');
+    Route::post('/sessions/{session}/exercises', [SessionController::class, 'addExercise'])->name('sessions.exercises.add');
+    Route::delete('/sessions/{session}/exercises/{pivotId}', [SessionController::class, 'removeExercise'])->name('sessions.exercises.remove');
+    Route::put('/sessions/{session}/exercises/reorder', [SessionController::class, 'reorderExercises'])->name('sessions.exercises.reorder');
 });
 
 Route::post('/register-request', [RegistrationRequestController::class, 'store'])

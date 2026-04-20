@@ -17,10 +17,15 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        User::factory()->create([
-            'name' => 'Admin',
-            'email' => 'admin@basketball-trainer.local',
-        ]);
+        User::firstOrCreate(
+            ['email' => 'admin@basketball-trainer.local'],
+            [
+                'name' => 'Admin',
+                'password' => bcrypt('password'),
+                'is_admin' => true,
+                'email_verified_at' => now(),
+            ],
+        );
 
         $this->call([
             AgeGroupSeeder::class,

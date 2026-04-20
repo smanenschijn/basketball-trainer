@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'is_admin'])]
+#[Fillable(['name', 'email', 'password', 'is_admin', 'training_days'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -29,11 +29,22 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_admin' => 'boolean',
+            'training_days' => 'array',
         ];
     }
 
     public function exercises(): HasMany
     {
         return $this->hasMany(Exercise::class);
+    }
+
+    public function sessions(): HasMany
+    {
+        return $this->hasMany(Session::class);
+    }
+
+    public function calendarAssignments(): HasMany
+    {
+        return $this->hasMany(CalendarAssignment::class);
     }
 }

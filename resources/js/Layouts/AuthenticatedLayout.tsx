@@ -40,9 +40,15 @@ const FrameworkIcon = () => (
     </svg>
 );
 
-const SessionsIcon = () => (
+const CalendarIcon = () => (
     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+);
+
+const SessionsIcon = () => (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
     </svg>
 );
 
@@ -85,7 +91,18 @@ export default function Authenticated({ children }: PropsWithChildren) {
                                 icon={<FrameworkIcon />}
                                 active={route().current('technical-framework.*')}
                             />
-                            <NavPill href="#" label={t('nav.sessions')} icon={<SessionsIcon />} />
+                            <NavPill
+                                href={route('sessions.index')}
+                                label={t('nav.sessions')}
+                                icon={<SessionsIcon />}
+                                active={route().current('sessions.*')}
+                            />
+                            <NavPill
+                                href={route('calendar.index')}
+                                label={t('nav.calendar')}
+                                icon={<CalendarIcon />}
+                                active={route().current('calendar.*')}
+                            />
 
                             {/* User dropdown */}
                             {user && (
@@ -147,6 +164,12 @@ export default function Authenticated({ children }: PropsWithChildren) {
                         </ResponsiveNavLink>
                         <ResponsiveNavLink href={route('technical-framework.index')} active={route().current('technical-framework.*')}>
                             {t('nav.technicalFramework')}
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink href={route('sessions.index')} active={route().current('sessions.*')}>
+                            {t('nav.sessions')}
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink href={route('calendar.index')} active={route().current('calendar.*')}>
+                            {t('nav.calendar')}
                         </ResponsiveNavLink>
                     </div>
                     <div className="border-t border-gray-700 pb-1 pt-4">

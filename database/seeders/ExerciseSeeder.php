@@ -7,6 +7,7 @@ use App\Models\Exercise;
 use App\Models\Material;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class ExerciseSeeder extends Seeder
 {

@@ -40,6 +40,42 @@ export interface TechnicalFramework {
     pdf_url: string;
 }
 
+export interface SessionExercise extends Exercise {
+    pivot: {
+        id: number;
+        sort_order: number;
+        duration_override: number | null;
+        notes: string | null;
+    };
+}
+
+export interface Session {
+    id: number;
+    title: string;
+    description: string | null;
+    duration_minutes: number;
+    age_group_id: number | null;
+    age_group: AgeGroup | null;
+    exercises: SessionExercise[];
+    created_at: string;
+    updated_at: string;
+}
+
+export interface CalendarSession {
+    id: number;
+    title: string;
+    duration_minutes: number;
+    age_group: AgeGroup | null;
+    exercise_count: number;
+    framework_exercise_count: number;
+}
+
+export interface CalendarAssignment {
+    id: number;
+    date: string;
+    session: CalendarSession;
+}
+
 export type PageProps<
     T extends Record<string, unknown> = Record<string, unknown>,
 > = T & {

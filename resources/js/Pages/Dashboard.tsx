@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next';
 
 interface DashboardProps {
     exerciseCount: number;
+    sessionCount: number;
+    totalTrainingMinutes: number;
 }
 
 function StatCard({ title, value, subtitle, unit, icon }: { title: string; value: number; subtitle: string; unit?: string; icon: React.ReactNode }) {
@@ -75,7 +77,7 @@ const ChartIcon = () => (
     </svg>
 );
 
-export default function Dashboard({ exerciseCount }: DashboardProps) {
+export default function Dashboard({ exerciseCount, sessionCount, totalTrainingMinutes }: DashboardProps) {
     const { t } = useTranslation();
     const [showAddExercise, setShowAddExercise] = useState(false);
 
@@ -106,13 +108,13 @@ export default function Dashboard({ exerciseCount }: DashboardProps) {
                     />
                     <StatCard
                         title={t('dashboard.trainingSessions')}
-                        value={0}
+                        value={sessionCount}
                         subtitle={t('dashboard.sessionsCreated')}
                         icon={<CalendarIcon />}
                     />
                     <StatCard
                         title={t('dashboard.totalTrainingTime')}
-                        value={0}
+                        value={totalTrainingMinutes}
                         unit={t('common.min')}
                         subtitle={t('dashboard.acrossAllSessions')}
                         icon={<ChartIcon />}
@@ -133,9 +135,9 @@ export default function Dashboard({ exerciseCount }: DashboardProps) {
                         title={t('dashboard.trainingSessions2')}
                         description={t('dashboard.trainingSessionsDescription')}
                         primaryLabel={t('dashboard.createNewSession')}
-                        primaryDisabled
+                        primaryOnClick={() => window.location.href = route('sessions.index')}
                         secondaryLabel={t('dashboard.viewAllSessions')}
-                        secondaryDisabled
+                        secondaryHref={route('sessions.index')}
                     />
                 </div>
 
