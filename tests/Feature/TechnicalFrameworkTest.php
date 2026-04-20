@@ -154,7 +154,7 @@ class TechnicalFrameworkTest extends TestCase
 
     public function test_exercise_can_be_marked_as_framework_on_create(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['is_admin' => true]);
         $ageGroup = AgeGroup::create(['label' => 'U12']);
 
         $response = $this->actingAs($user)

@@ -35,7 +35,7 @@ class ExerciseDeleteTest extends TestCase
 
     public function test_owner_can_delete_exercise(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['is_admin' => true]);
         $exercise = $this->createExercise($user);
 
         $response = $this->actingAs($user)->delete(route('exercises.destroy', $exercise));

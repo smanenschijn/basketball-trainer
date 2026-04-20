@@ -3,7 +3,7 @@ import ExerciseTile from '@/Components/ExerciseTile';
 import ExerciseDialog from '@/Components/Exercises/ExerciseDialog';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { AgeGroup, Exercise, Material } from '@/types';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -37,6 +37,7 @@ const PlusIcon = () => (
 
 export default function Index({ exercises, totalCount, filters, ageGroups, materials }: Props) {
     const { t } = useTranslation();
+    const { auth } = usePage().props as { auth: { user: { is_admin: boolean } } };
     const [showDialog, setShowDialog] = useState(false);
 
     const handleClose = () => {
@@ -58,6 +59,7 @@ export default function Index({ exercises, totalCount, filters, ageGroups, mater
                             {t('exercises.drillCount', { count: totalCount })}
                         </p>
                     </div>
+                    {auth.user.is_admin && (
                     <button
                         type="button"
                         onClick={() => setShowDialog(true)}
@@ -66,6 +68,7 @@ export default function Index({ exercises, totalCount, filters, ageGroups, mater
                         <PlusIcon />
                         {t('exercises.addDrill')}
                     </button>
+                    )}
                 </div>
 
                 {/* Filters */}

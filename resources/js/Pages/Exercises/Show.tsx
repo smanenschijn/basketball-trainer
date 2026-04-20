@@ -1,7 +1,7 @@
 import ExerciseDialog from '@/Components/Exercises/ExerciseDialog';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Exercise, AgeGroup } from '@/types';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -56,6 +56,7 @@ function extractYouTubeId(url: string): string | null {
 
 export default function Show({ exercise, ageGroups }: Props) {
     const { t } = useTranslation();
+    const { auth } = usePage().props as { auth: { user: { is_admin: boolean } } };
     const [showEditDialog, setShowEditDialog] = useState(false);
     const ageLabels = exercise.age_groups?.map((ag) => ag.label).join(', ') || '-';
     const videoId = exercise.youtube_url ? extractYouTubeId(exercise.youtube_url) : null;
@@ -117,10 +118,11 @@ export default function Show({ exercise, ageGroups }: Props) {
                             </div>
                         )}
 
-                        <div className="flex items-start justify-between gap-4">
+                            <div className="flex items-start justify-between gap-4">
                             <h1 className="text-3xl font-black uppercase tracking-tight text-brand-black">
                                 {exercise.title}
                             </h1>
+                            {auth.user.is_admin && (
                             <div className="flex shrink-0 items-center gap-2">
                                 <button
                                     type="button"
@@ -139,6 +141,7 @@ export default function Show({ exercise, ageGroups }: Props) {
                                     {t('common.delete')}
                                 </button>
                             </div>
+                            )}
                         </div>
 
                         {/* Metadata bar */}

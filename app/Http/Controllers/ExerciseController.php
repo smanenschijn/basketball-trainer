@@ -50,6 +50,8 @@ class ExerciseController extends Controller
 
     public function store(StoreExerciseRequest $request)
     {
+        Gate::authorize('create', Exercise::class);
+
         $exercise = Exercise::create([
             ...$request->safe()->except(['materials', 'age_groups']),
             'user_id' => $request->user()?->id,

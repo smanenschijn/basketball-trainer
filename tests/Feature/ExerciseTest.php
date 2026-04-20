@@ -34,7 +34,7 @@ class ExerciseTest extends TestCase
 
     public function test_user_can_create_exercise(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['is_admin' => true]);
 
         $response = $this->actingAs($user)
             ->post(route('exercises.store'), $this->validData());
@@ -51,7 +51,7 @@ class ExerciseTest extends TestCase
 
     public function test_materials_are_created_and_associated(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['is_admin' => true]);
 
         $this->actingAs($user)
             ->post(route('exercises.store'), $this->validData([
@@ -67,7 +67,7 @@ class ExerciseTest extends TestCase
 
     public function test_existing_materials_are_reused(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['is_admin' => true]);
         Material::create(['name' => 'basketballs']);
 
         $this->actingAs($user)
@@ -114,7 +114,7 @@ class ExerciseTest extends TestCase
 
     public function test_youtube_url_is_optional(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['is_admin' => true]);
 
         $response = $this->actingAs($user)
             ->post(route('exercises.store'), $this->validData([
