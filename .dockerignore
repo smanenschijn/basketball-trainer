@@ -1,0 +1,16 @@
+.git
+.env
+node_modules
+vendor
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+.opencode
+.phpunit.result.cache
+tests
+phpunit.xml
+PLAN*.md
+AGENTS.md
+README.md
+docker-compose.yml
