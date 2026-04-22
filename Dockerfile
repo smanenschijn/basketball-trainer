@@ -47,9 +47,13 @@ RUN composer dump-autoload --optimize
 # Create required directories and set permissions
 RUN mkdir -p storage/framework/{sessions,views,cache} \
     storage/logs \
+    storage/app/public \
     bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
+
+# Declare volume for persistent uploads (survives redeploys)
+VOLUME /var/www/html/storage/app/public
 
 # Nginx config
 RUN cat > /etc/nginx/http.d/default.conf << 'EOF'
@@ -102,4 +106,4 @@ EOF
 
 EXPOSE 80
 
-CMD ["sh", "-c", "php artisan migrate --force && php artisan db:seed --class=AgeGroupSeeder --force && php artisan config:cache && php artisan route:cache && php artisan view:cache && /usr/bin/supervisord -c /etc/supervisord.conf"]
+CMD ["sh", "-c", "php artisan storage:link --force && php artisan migrate --force && php artisan db:seed --class=AgeGroupSeeder --force && php artisan config:cache && php artisan route:cache && php artisan view:cache && /usr/bin/supervisord -c /etc/supervisord.conf"]

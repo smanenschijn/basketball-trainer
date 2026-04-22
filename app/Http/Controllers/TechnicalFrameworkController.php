@@ -73,6 +73,10 @@ class TechnicalFrameworkController extends Controller
             abort(404);
         }
 
+        if (! Storage::disk('public')->exists($framework->file_path)) {
+            abort(404, 'The PDF file could not be found on disk. It may have been lost during deployment.');
+        }
+
         $path = Storage::disk('public')->path($framework->file_path);
 
         return response()->file($path, [
