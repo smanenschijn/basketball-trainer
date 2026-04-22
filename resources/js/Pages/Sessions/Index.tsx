@@ -1,19 +1,11 @@
 import CreateSessionDialog from '@/Components/Sessions/CreateSessionDialog';
 import SessionTile from '@/Components/Sessions/SessionTile';
+import Pagination from '@/Components/Pagination';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { AgeGroup, Session } from '@/types';
-import { Head, Link } from '@inertiajs/react';
+import { AgeGroup, PaginatedData, Session } from '@/types';
+import { Head } from '@inertiajs/react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-
-interface PaginatedData<T> {
-    data: T[];
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
-    links: { url: string | null; label: string; active: boolean }[];
-}
 
 interface Props {
     sessions: PaginatedData<Session>;
@@ -75,25 +67,7 @@ export default function Index({ sessions, ageGroups }: Props) {
                 )}
 
                 {/* Pagination */}
-                {sessions.last_page > 1 && (
-                    <nav className="mt-8 flex justify-center gap-1">
-                        {sessions.links.map((link, i) => (
-                            <Link
-                                key={i}
-                                href={link.url ?? '#'}
-                                className={`px-3 py-2 text-sm font-semibold transition ${
-                                    link.active
-                                        ? 'bg-brand-gold text-brand-black'
-                                        : link.url
-                                          ? 'text-gray-600 hover:bg-gray-100'
-                                          : 'cursor-default text-gray-300'
-                                }`}
-                                preserveScroll
-                                dangerouslySetInnerHTML={{ __html: link.label }}
-                            />
-                        ))}
-                    </nav>
-                )}
+                <Pagination links={sessions.links} lastPage={sessions.last_page} />
             </div>
 
             <CreateSessionDialog

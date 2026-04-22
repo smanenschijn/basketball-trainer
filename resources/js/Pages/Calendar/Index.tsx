@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import SessionSummary from '@/Components/Calendar/SessionSummary';
 import { CalendarAssignment, CalendarSession } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
@@ -13,15 +14,20 @@ interface Props {
 
 const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
 
+const LOCALE_MAP: Record<string, string> = {
+    nl: 'nl-NL',
+    en: 'en-US',
+};
+
 function addDays(dateStr: string, days: number): string {
     const d = new Date(dateStr + 'T00:00:00');
     d.setDate(d.getDate() + days);
     return d.toISOString().split('T')[0];
 }
 
-function formatDateShort(dateStr: string): string {
+function formatDateShort(dateStr: string, locale: string): string {
     const d = new Date(dateStr + 'T00:00:00');
-    return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
+    return d.toLocaleDateString(LOCALE_MAP[locale] ?? locale, { day: 'numeric', month: 'short' });
 }
 
 function isToday(dateStr: string): boolean {
@@ -32,12 +38,6 @@ function isPast(dateStr: string): boolean {
     return dateStr < new Date().toISOString().split('T')[0];
 }
 
-const FrameworkIcon = () => (
-    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-    </svg>
-);
-
 const XIcon = () => (
     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -45,7 +45,7 @@ const XIcon = () => (
 );
 
 export default function Index({ assignments, trainingDays: initialTrainingDays, sessions, startDate }: Props) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [trainingDays, setTrainingDays] = useState<number[]>(initialTrainingDays);
     const [pickingDate, setPickingDate] = useState<string | null>(null);
     const [dragSessionId, setDragSessionId] = useState<number | null>(null);
@@ -133,7 +133,7 @@ export default function Index({ assignments, trainingDays: initialTrainingDays, 
                             </div>
                         ) : (
                         weeks.map((week, wi) => {
-                            const weekLabel = formatDateShort(week[0]);
+                            const weekLabel = formatDateShort(week[0], i18n.language);
                             const sortedDays = [...trainingDays].sort((a, b) => a - b);
                             return (
                                 <div key={wi} className="mb-6">
@@ -183,7 +183,7 @@ export default function Index({ assignments, trainingDays: initialTrainingDays, 
                                                     }}
                                                 >
                                                     <div className={`text-xs font-bold ${today ? 'text-brand-gold' : 'text-gray-400'}`}>
-                                                        {formatDateShort(date)}
+                                                        {formatDateShort(date, i18n.language)}
                                                     </div>
 
                                                     {assignment ? (
@@ -205,7 +205,6 @@ export default function Index({ assignments, trainingDays: initialTrainingDays, 
                                                             </p>
                                                             {assignment.session.framework_exercise_count > 0 && (
                                                                 <div className="mt-0.5 flex items-center gap-1 text-[10px] font-bold text-brand-black">
-                                                                    <FrameworkIcon />
                                                                     {t('sessions.fundamentalCount', {
                                                                         count: assignment.session.framework_exercise_count,
                                                                     })}
@@ -258,24 +257,7 @@ export default function Index({ assignments, trainingDays: initialTrainingDays, 
                                                 dragSessionId === session.id ? 'opacity-50' : 'hover:bg-brand-gold/10'
                                             }`}
                                         >
-                                            <p className="text-xs font-black uppercase text-brand-black">
-                                                {session.title}
-                                            </p>
-                                            {session.age_group && (
-                                                <p className="text-[10px] text-gray-500">{session.age_group.label}</p>
-                                            )}
-                                            <p className="text-[10px] text-gray-400">
-                                                {session.duration_minutes} {t('common.min')} &middot;{' '}
-                                                {t('sessions.exerciseCount', { count: session.exercise_count })}
-                                            </p>
-                                            {session.framework_exercise_count > 0 && (
-                                                <div className="mt-0.5 flex items-center gap-1 text-[10px] font-bold text-brand-black">
-                                                    <FrameworkIcon />
-                                                    {t('sessions.fundamentalCount', {
-                                                        count: session.framework_exercise_count,
-                                                    })}
-                                                </div>
-                                            )}
+                                            <SessionSummary session={session} compact />
                                         </div>
                                     ))}
                                 </div>
@@ -298,7 +280,7 @@ export default function Index({ assignments, trainingDays: initialTrainingDays, 
                         <h3 className="mb-1 text-sm font-black uppercase tracking-wider text-brand-black">
                             {t('calendar.pickSession')}
                         </h3>
-                        <p className="mb-4 text-xs text-gray-500">{formatDateShort(pickingDate)}</p>
+                        <p className="mb-4 text-xs text-gray-500">{formatDateShort(pickingDate, i18n.language)}</p>
 
                         {sessions.length > 0 ? (
                             <div className="max-h-64 space-y-2 overflow-y-auto">
@@ -309,24 +291,7 @@ export default function Index({ assignments, trainingDays: initialTrainingDays, 
                                         onClick={() => assignSession(session.id, pickingDate)}
                                         className="w-full border-2 border-brand-black p-3 text-left transition hover:bg-brand-gold/20"
                                     >
-                                        <p className="text-xs font-black uppercase text-brand-black">
-                                            {session.title}
-                                        </p>
-                                        {session.age_group && (
-                                            <p className="text-[10px] text-gray-500">{session.age_group.label}</p>
-                                        )}
-                                        <p className="text-[10px] text-gray-400">
-                                            {session.duration_minutes} {t('common.min')} &middot;{' '}
-                                            {t('sessions.exerciseCount', { count: session.exercise_count })}
-                                        </p>
-                                        {session.framework_exercise_count > 0 && (
-                                            <div className="mt-0.5 flex items-center gap-1 text-[10px] font-bold text-brand-black">
-                                                <FrameworkIcon />
-                                                {t('sessions.fundamentalCount', {
-                                                    count: session.framework_exercise_count,
-                                                })}
-                                            </div>
-                                        )}
+                                        <SessionSummary session={session} compact />
                                     </button>
                                 ))}
                             </div>

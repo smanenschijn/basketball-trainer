@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\RegistrationStatus;
 use App\Models\RegistrationRequest;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -36,7 +37,7 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
             ],
             'pendingRegistrationCount' => fn () => $request->user()?->is_admin
-                ? RegistrationRequest::where('status', 'pending')->count()
+                ? RegistrationRequest::where('status', RegistrationStatus::Pending)->count()
                 : 0,
         ];
     }

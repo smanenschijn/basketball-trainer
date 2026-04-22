@@ -16,26 +16,19 @@ class TechnicalFrameworkController extends Controller
         $framework = TechnicalFramework::latest()->first();
         $ageGroups = AgeGroup::orderBy('label')->get(['id', 'label']);
 
-        // Get exercises marked as framework, grouped by age group
+        // Get all framework exercises in a single query, then group by age group
         $frameworkExercises = Exercise::query()
             ->with(['materials', 'ageGroups'])
             ->whereHas('ageGroups', fn ($q) => $q->where('exercise_age_group.is_framework', true))
-            ->get()
-            ->groupBy(fn (Exercise $exercise) => $exercise->ageGroups
-                ->where('pivot.is_framework', true)
-                ->pluck('id')
-                ->toArray())
-            ->toArray();
+            ->get();
 
-        // Flatten into a map of age_group_id => exercises
         $exercisesByAgeGroup = [];
         foreach ($ageGroups as $ageGroup) {
-            $exercisesByAgeGroup[$ageGroup->id] = Exercise::query()
-                ->with(['materials', 'ageGroups'])
-                ->whereHas('ageGroups', fn ($q) => $q
-                    ->where('age_groups.id', $ageGroup->id)
-                    ->where('exercise_age_group.is_framework', true))
-                ->get();
+            $exercisesByAgeGroup[$ageGroup->id] = $frameworkExercises->filter(
+                fn (Exercise $exercise) => $exercise->ageGroups
+                    ->where('pivot.is_framework', true)
+                    ->contains('id', $ageGroup->id)
+            )->values();
         }
 
         return Inertia::render('TechnicalFramework/Index', [

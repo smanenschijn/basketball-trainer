@@ -40,7 +40,7 @@ class TechnicalFrameworkTest extends TestCase
     public function test_user_can_upload_framework_pdf(): void
     {
         Storage::fake('public');
-        $user = User::factory()->create();
+        $user = User::factory()->create(['is_admin' => true]);
 
         $response = $this->actingAs($user)
             ->post(route('technical-framework.upload'), [
@@ -64,7 +64,7 @@ class TechnicalFrameworkTest extends TestCase
     public function test_upload_replaces_existing_framework(): void
     {
         Storage::fake('public');
-        $user = User::factory()->create();
+        $user = User::factory()->create(['is_admin' => true]);
 
         // Upload first
         $this->actingAs($user)
@@ -87,7 +87,7 @@ class TechnicalFrameworkTest extends TestCase
 
     public function test_upload_requires_pdf_file(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['is_admin' => true]);
 
         $response = $this->actingAs($user)
             ->post(route('technical-framework.upload'), [
@@ -100,7 +100,7 @@ class TechnicalFrameworkTest extends TestCase
     public function test_framework_pdf_endpoint_returns_file(): void
     {
         Storage::fake('public');
-        $user = User::factory()->create();
+        $user = User::factory()->create(['is_admin' => true]);
 
         $this->actingAs($user)
             ->post(route('technical-framework.upload'), [

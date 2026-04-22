@@ -16,26 +16,8 @@ class ExerciseController extends Controller
     public function index(Request $request)
     {
         $query = Exercise::query()
-            ->with(['materials', 'ageGroups' => fn ($q) => $q->withPivot('is_framework')]);
-
-        if ($search = $request->input('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%");
-            });
-        }
-
-        if ($ageGroupId = $request->input('age_group_id')) {
-            $query->whereHas('ageGroups', fn ($q) => $q->where('age_groups.id', $ageGroupId));
-        }
-
-        if ($duration = $request->input('duration')) {
-            $query->where('duration_minutes', '<=', (int) $duration);
-        }
-
-        if ($materialId = $request->input('material_id')) {
-            $query->whereHas('materials', fn ($q) => $q->where('materials.id', $materialId));
-        }
+            ->with(['materials', 'ageGroups' => fn ($q) => $q->withPivot('is_framework')])
+            ->applyFilters($request->only(['search', 'age_group_id', 'duration', 'material_id']));
 
         $exercises = $query->latest()->paginate(50)->withQueryString();
 
@@ -53,28 +35,15 @@ class ExerciseController extends Controller
         Gate::authorize('create', Exercise::class);
 
         $exercise = Exercise::create([
-            ...$request->safe()->except(['materials', 'age_groups']),
+            ...$request->safe()->except(['materials', 'age_groups', 'framework_age_groups']),
             'user_id' => $request->user()?->id,
         ]);
 
-        if ($materials = $request->validated('materials', [])) {
-            $materialIds = collect($materials)->map(function (string $name) {
-                return Material::firstOrCreate(['name' => strtolower(trim($name))])->id;
-            });
-
-            $exercise->materials()->sync($materialIds);
-        }
-
-        if ($ageGroups = $request->validated('age_groups', [])) {
-            $frameworkAgeGroups = $request->validated('framework_age_groups', []);
-            $syncData = [];
-            foreach ($ageGroups as $ageGroupId) {
-                $syncData[$ageGroupId] = [
-                    'is_framework' => in_array($ageGroupId, $frameworkAgeGroups),
-                ];
-            }
-            $exercise->ageGroups()->sync($syncData);
-        }
+        $exercise->syncMaterialsByName($request->validated('materials', []));
+        $exercise->syncAgeGroupsWithFramework(
+            $request->validated('age_groups', []),
+            $request->validated('framework_age_groups', []),
+        );
 
         return back()->with('success', 'Exercise created successfully.');
     }
@@ -102,30 +71,13 @@ class ExerciseController extends Controller
     {
         Gate::authorize('update', $exercise);
 
-        $exercise->update($request->safe()->except(['materials', 'age_groups']));
+        $exercise->update($request->safe()->except(['materials', 'age_groups', 'framework_age_groups']));
 
-        if ($materials = $request->validated('materials', [])) {
-            $materialIds = collect($materials)->map(function (string $name) {
-                return Material::firstOrCreate(['name' => strtolower(trim($name))])->id;
-            });
-
-            $exercise->materials()->sync($materialIds);
-        } else {
-            $exercise->materials()->detach();
-        }
-
-        if ($ageGroups = $request->validated('age_groups', [])) {
-            $frameworkAgeGroups = $request->validated('framework_age_groups', []);
-            $syncData = [];
-            foreach ($ageGroups as $ageGroupId) {
-                $syncData[$ageGroupId] = [
-                    'is_framework' => in_array($ageGroupId, $frameworkAgeGroups),
-                ];
-            }
-            $exercise->ageGroups()->sync($syncData);
-        } else {
-            $exercise->ageGroups()->detach();
-        }
+        $exercise->syncMaterialsByName($request->validated('materials', []));
+        $exercise->syncAgeGroupsWithFramework(
+            $request->validated('age_groups', []),
+            $request->validated('framework_age_groups', []),
+        );
 
         return back()->with('success', 'Exercise updated successfully.');
     }

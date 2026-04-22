@@ -47,44 +47,22 @@ class SessionController extends Controller
         $session->load(['ageGroup', 'exercises.materials', 'exercises.ageGroups']);
 
         // Exercise library for the builder — pre-filtered by age group
-        $exerciseQuery = Exercise::query()
-            ->with(['materials', 'ageGroups']);
-
-        if ($search = $request->input('search')) {
-            $exerciseQuery->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%");
-            });
+        $filters = $request->only(['search', 'age_group_id', 'duration', 'material_id', 'is_framework']);
+        if (! isset($filters['age_group_id']) && $session->age_group_id) {
+            $filters['age_group_id'] = (string) $session->age_group_id;
         }
 
-        $ageGroupFilter = $request->input('age_group_id', $session->age_group_id);
-        if ($ageGroupFilter) {
-            $exerciseQuery->whereHas('ageGroups', fn ($q) => $q->where('age_groups.id', $ageGroupFilter));
-        }
-
-        if ($duration = $request->input('duration')) {
-            $exerciseQuery->where('duration_minutes', '<=', (int) $duration);
-        }
-
-        if ($materialId = $request->input('material_id')) {
-            $exerciseQuery->whereHas('materials', fn ($q) => $q->where('materials.id', $materialId));
-        }
-
-        if ($request->boolean('is_framework')) {
-            $exerciseQuery->whereHas('ageGroups', fn ($q) => $q->where('exercise_age_group.is_framework', true));
-        }
-
-        $exercises = $exerciseQuery->latest()->paginate(50)->withQueryString();
-
-        $effectiveFilters = $request->only(['search', 'age_group_id', 'duration', 'material_id', 'is_framework']);
-        if (! isset($effectiveFilters['age_group_id']) && $session->age_group_id) {
-            $effectiveFilters['age_group_id'] = (string) $session->age_group_id;
-        }
+        $exercises = Exercise::query()
+            ->with(['materials', 'ageGroups'])
+            ->applyFilters($filters)
+            ->latest()
+            ->paginate(50)
+            ->withQueryString();
 
         return Inertia::render('Sessions/Show', [
             'session' => $session,
             'exercises' => $exercises,
-            'filters' => $effectiveFilters,
+            'filters' => $filters,
             'ageGroups' => AgeGroup::orderBy('label')->get(['id', 'label']),
             'materials' => Material::orderBy('name')->get(['id', 'name']),
         ]);

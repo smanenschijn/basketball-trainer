@@ -1,6 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import Pagination from '@/Components/Pagination';
 import SlideOver from '@/Components/SlideOver';
-import { AgeGroup, Exercise, Material, Session, SessionExercise } from '@/types';
+import { AgeGroup, Exercise, Material, PaginatedData, Session, SessionExercise } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import {
     DndContext,
@@ -22,15 +23,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-
-interface PaginatedData<T> {
-    data: T[];
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
-    links: { url: string | null; label: string; active: boolean }[];
-}
+import { sanitizeHtml } from '@/utils/sanitize';
 
 interface Props {
     session: Session;
@@ -275,7 +268,7 @@ function ExerciseDetailPanel({ exercise }: { exercise: SessionExercise }) {
                     </h3>
                     <div
                         className="prose prose-sm max-w-none text-gray-700"
-                        dangerouslySetInnerHTML={{ __html: exercise.explanation }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(exercise.explanation) }}
                     />
                 </div>
             )}
@@ -588,25 +581,7 @@ export default function Show({ session, exercises, filters, ageGroups, materials
                 )}
 
                 {/* Pagination */}
-                {exercises.last_page > 1 && (
-                    <nav className="mt-4 flex justify-center gap-1">
-                        {exercises.links.map((link, i) => (
-                            <Link
-                                key={i}
-                                href={link.url ?? '#'}
-                                className={`px-3 py-2 text-sm font-semibold transition ${
-                                    link.active
-                                        ? 'bg-brand-gold text-brand-black'
-                                        : link.url
-                                          ? 'text-gray-600 hover:bg-gray-100'
-                                          : 'cursor-default text-gray-300'
-                                }`}
-                                preserveScroll
-                                dangerouslySetInnerHTML={{ __html: link.label }}
-                            />
-                        ))}
-                    </nav>
-                )}
+                <Pagination links={exercises.links} lastPage={exercises.last_page} />
             </SlideOver>
         </AuthenticatedLayout>
     );

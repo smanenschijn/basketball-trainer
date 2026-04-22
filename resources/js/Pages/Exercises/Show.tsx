@@ -1,6 +1,7 @@
 import ExerciseDialog from '@/Components/Exercises/ExerciseDialog';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Exercise, AgeGroup } from '@/types';
+import { sanitizeHtml } from '@/utils/sanitize';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -195,7 +196,7 @@ export default function Show({ exercise, ageGroups }: Props) {
                                 </h2>
                                 <div
                                     className="prose prose-sm max-w-none text-gray-700"
-                                    dangerouslySetInnerHTML={{ __html: exercise.explanation }}
+                                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(exercise.explanation) }}
                                 />
                             </div>
                         )}

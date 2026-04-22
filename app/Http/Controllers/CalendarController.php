@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\AssignCalendarRequest;
+use App\Http\Requests\CalendarDateRequest;
 use App\Models\CalendarAssignment;
 use App\Models\Session;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 
 class CalendarController extends Controller
@@ -64,37 +67,19 @@ class CalendarController extends Controller
         ]);
     }
 
-    public function assign(Request $request)
+    public function assign(AssignCalendarRequest $request)
     {
-        $validated = $request->validate([
-            'session_id' => ['required', 'integer', 'exists:training_sessions,id'],
-            'date' => ['required', 'date'],
-        ]);
-
         $user = $request->user();
 
         // Verify user owns the session
-        $session = Session::findOrFail($validated['session_id']);
+        $session = Session::findOrFail($request->validated('session_id'));
         if ($session->user_id !== $user->id) {
             abort(403);
         }
 
-        // Enforce 4-week window
-        $startOfWeek = Carbon::now()->startOfWeek(Carbon::MONDAY);
-        $endDate = $startOfWeek->copy()->addWeeks(4)->subDay();
-        $date = Carbon::parse($validated['date']);
-
-        if ($date->lt($startOfWeek) || $date->gt($endDate)) {
-            abort(422, 'Date must be within the next 4 weeks.');
-        }
-
-        if ($date->lt(Carbon::today())) {
-            abort(422, 'Cannot assign a session to a past date.');
-        }
-
         $user->calendarAssignments()->updateOrCreate(
-            ['date' => $validated['date']],
-            ['session_id' => $validated['session_id']],
+            ['date' => $request->validated('date')],
+            ['session_id' => $request->validated('session_id')],
         );
 
         return back()->with('success', 'Session assigned.');
@@ -102,41 +87,20 @@ class CalendarController extends Controller
 
     public function unassign(Request $request, CalendarAssignment $assignment)
     {
-        if ($assignment->user_id !== $request->user()->id) {
-            abort(403);
-        }
+        Gate::authorize('delete', $assignment);
 
         $assignment->delete();
 
         return back()->with('success', 'Session unassigned.');
     }
 
-    public function move(Request $request, CalendarAssignment $assignment)
+    public function move(CalendarDateRequest $request, CalendarAssignment $assignment)
     {
-        if ($assignment->user_id !== $request->user()->id) {
-            abort(403);
-        }
-
-        $validated = $request->validate([
-            'date' => ['required', 'date'],
-        ]);
-
-        // Enforce 4-week window
-        $startOfWeek = Carbon::now()->startOfWeek(Carbon::MONDAY);
-        $endDate = $startOfWeek->copy()->addWeeks(4)->subDay();
-        $date = Carbon::parse($validated['date']);
-
-        if ($date->lt($startOfWeek) || $date->gt($endDate)) {
-            abort(422, 'Date must be within the next 4 weeks.');
-        }
-
-        if ($date->lt(Carbon::today())) {
-            abort(422, 'Cannot move a session to a past date.');
-        }
+        Gate::authorize('update', $assignment);
 
         // Check no existing assignment on target date
         $existing = CalendarAssignment::where('user_id', $request->user()->id)
-            ->where('date', $validated['date'])
+            ->where('date', $request->validated('date'))
             ->where('id', '!=', $assignment->id)
             ->exists();
 
@@ -144,7 +108,7 @@ class CalendarController extends Controller
             abort(422, 'A session is already assigned to that date.');
         }
 
-        $assignment->update(['date' => $validated['date']]);
+        $assignment->update(['date' => $request->validated('date')]);
 
         return back()->with('success', 'Session moved.');
     }

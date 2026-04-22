@@ -111,8 +111,8 @@ class CalendarTest extends TestCase
     {
         $user = User::factory()->create();
         $session = $this->createSessionForUser($user);
-        $date1 = Carbon::now()->startOfWeek(Carbon::MONDAY)->toDateString();
-        $date2 = Carbon::now()->startOfWeek(Carbon::MONDAY)->addDays(3)->toDateString();
+        $date1 = Carbon::tomorrow()->toDateString();
+        $date2 = Carbon::tomorrow()->addDays(3)->toDateString();
 
         $this->actingAs($user)->post(route('calendar.assign'), [
             'session_id' => $session->id,

@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\RegistrationRequestController as AdminRegistrationRequestController;
 use App\Http\Controllers\Auth\SetupPasswordController;
 use App\Http\Controllers\CalendarController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExerciseController;
 use App\Http\Controllers\ExerciseImageController;
 use App\Http\Controllers\MaterialController;
@@ -11,23 +12,14 @@ use App\Http\Controllers\RegistrationRequestController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\TechnicalFrameworkController;
 use App\Http\Controllers\TrainingDayController;
-use App\Models\Exercise;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
 Route::get('/', function () {
     return redirect()->route('dashboard');
 });
 
-Route::get('/dashboard', function () {
-    $user = request()->user();
-
-    return Inertia::render('Dashboard', [
-        'exerciseCount' => Exercise::count(),
-        'sessionCount' => $user->sessions()->count(),
-        'totalTrainingMinutes' => (int) $user->sessions()->sum('duration_minutes'),
-    ]);
-})->middleware('auth')->name('dashboard');
+Route::get('/dashboard', DashboardController::class)
+    ->middleware('auth')->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -66,6 +58,7 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::post('/register-request', [RegistrationRequestController::class, 'store'])
+    ->middleware('throttle:5,1')
     ->name('registration-request.store');
 
 Route::get('/setup-password/{user}', [SetupPasswordController::class, 'create'])

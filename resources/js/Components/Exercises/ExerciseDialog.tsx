@@ -69,7 +69,7 @@ export default function ExerciseDialog({
             setDefaults(empty);
             setData(empty);
         }
-    }, [show]);
+    }, [show, exercise]);
 
     const handleClose = () => {
         reset();

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -73,5 +74,80 @@ class Exercise extends Model
     public function images(): HasMany
     {
         return $this->hasMany(ExerciseImage::class);
+    }
+
+    /**
+     * Sync materials by name, creating any that don't exist yet.
+     *
+     * @param  string[]  $materialNames
+     */
+    public function syncMaterialsByName(array $materialNames): void
+    {
+        if (empty($materialNames)) {
+            $this->materials()->detach();
+
+            return;
+        }
+
+        $materialIds = collect($materialNames)->map(function (string $name) {
+            return Material::firstOrCreate(['name' => strtolower(trim($name))])->id;
+        });
+
+        $this->materials()->sync($materialIds);
+    }
+
+    /**
+     * Sync age groups with framework pivot data.
+     *
+     * @param  int[]  $ageGroupIds
+     * @param  int[]  $frameworkAgeGroupIds
+     */
+    public function syncAgeGroupsWithFramework(array $ageGroupIds, array $frameworkAgeGroupIds = []): void
+    {
+        if (empty($ageGroupIds)) {
+            $this->ageGroups()->detach();
+
+            return;
+        }
+
+        $syncData = [];
+        foreach ($ageGroupIds as $ageGroupId) {
+            $syncData[$ageGroupId] = [
+                'is_framework' => in_array($ageGroupId, $frameworkAgeGroupIds),
+            ];
+        }
+        $this->ageGroups()->sync($syncData);
+    }
+
+    /**
+     * Apply common exercise filters (search, age group, duration, material).
+     */
+    public function scopeApplyFilters(Builder $query, array $filters): Builder
+    {
+        if (! empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        if (! empty($filters['age_group_id'])) {
+            $query->whereHas('ageGroups', fn ($q) => $q->where('age_groups.id', $filters['age_group_id']));
+        }
+
+        if (! empty($filters['duration'])) {
+            $query->where('duration_minutes', '<=', (int) $filters['duration']);
+        }
+
+        if (! empty($filters['material_id'])) {
+            $query->whereHas('materials', fn ($q) => $q->where('materials.id', $filters['material_id']));
+        }
+
+        if (! empty($filters['is_framework'])) {
+            $query->whereHas('ageGroups', fn ($q) => $q->where('exercise_age_group.is_framework', true));
+        }
+
+        return $query;
     }
 }
