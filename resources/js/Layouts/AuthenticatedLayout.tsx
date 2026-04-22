@@ -1,5 +1,4 @@
 import Dropdown from '@/Components/Dropdown';
-import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
 import { Link, usePage } from '@inertiajs/react';
 import { PropsWithChildren, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -63,9 +62,33 @@ export default function Authenticated({ children }: PropsWithChildren) {
         <div className="min-h-screen bg-brand-cream">
             <nav className="bg-brand-black">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <div className="flex h-16 items-center justify-between">
-                        {/* Logo + Title */}
-                        <div className="flex items-center gap-3">
+                    <div className="relative flex h-16 items-center justify-between">
+                        {/* Mobile: burger left */}
+                        <div className="flex items-center sm:hidden">
+                            <button
+                                onClick={() => setShowingNavigationDropdown(prev => !prev)}
+                                className="inline-flex items-center justify-center rounded-md p-2 text-brand-gold transition hover:bg-gray-800"
+                                aria-label="Toggle navigation"
+                            >
+                                <svg className="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+                                    <path className={!showingNavigationDropdown ? 'inline-flex' : 'hidden'} strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                                    <path className={showingNavigationDropdown ? 'inline-flex' : 'hidden'} strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        {/* Mobile: centered logo */}
+                        <div className="absolute left-1/2 -translate-x-1/2 sm:hidden">
+                            <Link href={route('dashboard')}>
+                                <img src="/images/logo.png" alt="Basketball Trainer" className="h-20 w-20 -my-4 object-contain" />
+                            </Link>
+                        </div>
+
+                        {/* Mobile: right spacer for symmetry */}
+                        <div className="w-10 sm:hidden" />
+
+                        {/* Desktop: Logo left */}
+                        <div className="hidden sm:flex items-center gap-3">
                             <Link href={route('dashboard')} className="flex items-center gap-3">
                                 <img src="/images/logo.png" alt="Basketball Trainer" className="h-20 w-20 -my-4 object-contain" />
                             </Link>
@@ -137,67 +160,58 @@ export default function Authenticated({ children }: PropsWithChildren) {
                             </div>
                             )}
                         </div>
-
-                        {/* Mobile hamburger */}
-                        <div className="-me-2 flex items-center sm:hidden">
-                            <button
-                                onClick={() => setShowingNavigationDropdown(prev => !prev)}
-                                className="inline-flex items-center justify-center p-2 text-gray-400 transition hover:bg-gray-700 hover:text-white"
-                            >
-                                <svg className="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
-                                    <path className={!showingNavigationDropdown ? 'inline-flex' : 'hidden'} strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-                                    <path className={showingNavigationDropdown ? 'inline-flex' : 'hidden'} strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
                     </div>
                 </div>
 
                 {/* Mobile menu */}
-                <div className={(showingNavigationDropdown ? 'block' : 'hidden') + ' sm:hidden'}>
-                    <div className="space-y-1 pb-3 pt-2">
-                        <ResponsiveNavLink href={route('dashboard')} active={route().current('dashboard')}>
-                            {t('nav.home')}
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink href={route('exercises.index')} active={route().current('exercises.*')}>
-                            {t('nav.exercises')}
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink href={route('technical-framework.index')} active={route().current('technical-framework.*')}>
-                            {t('nav.technicalFramework')}
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink href={route('sessions.index')} active={route().current('sessions.*')}>
-                            {t('nav.sessions')}
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink href={route('calendar.index')} active={route().current('calendar.*')}>
-                            {t('nav.calendar')}
-                        </ResponsiveNavLink>
+                <div className={(showingNavigationDropdown ? 'block' : 'hidden') + ' sm:hidden border-t border-gray-700'}>
+                    <div className="space-y-1 px-4 pb-4 pt-3">
+                        {[
+                            { href: route('dashboard'), label: t('nav.home'), icon: <HomeIcon />, active: route().current('dashboard') },
+                            { href: route('exercises.index'), label: t('nav.exercises'), icon: <ExercisesIcon />, active: route().current('exercises.*') },
+                            { href: route('technical-framework.index'), label: t('nav.technicalFramework'), icon: <FrameworkIcon />, active: route().current('technical-framework.*') },
+                            { href: route('sessions.index'), label: t('nav.sessions'), icon: <SessionsIcon />, active: route().current('sessions.*') },
+                            { href: route('calendar.index'), label: t('nav.calendar'), icon: <CalendarIcon />, active: route().current('calendar.*') },
+                        ].map((item) => (
+                            <Link
+                                key={item.href}
+                                href={item.href}
+                                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-bold transition ${
+                                    item.active
+                                        ? 'bg-brand-gold text-black'
+                                        : 'text-brand-gold hover:bg-gray-800'
+                                }`}
+                            >
+                                {item.icon}
+                                {item.label}
+                            </Link>
+                        ))}
                     </div>
-                    <div className="border-t border-gray-700 pb-1 pt-4">
-                        {user && (
-                        <>
-                        <div className="px-4">
-                            <div className="flex items-center text-base font-medium text-white">
-                                {user.name}
-                                {user.is_admin && pendingRegistrationCount > 0 && (
-                                    <span className="ml-2 inline-flex items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-xs font-bold leading-none text-white">
-                                        {pendingRegistrationCount}
-                                    </span>
-                                )}
-                            </div>
-                            <div className="text-sm font-medium text-gray-400">{user.email}</div>
-                        </div>
-                        <div className="mt-3 space-y-1">
-                            <ResponsiveNavLink href={route('profile.edit')}>{t('nav.profile')}</ResponsiveNavLink>
-                            {user?.is_admin && (
-                                <ResponsiveNavLink href={route('admin.registration-requests.index')}>
-                                    {t('admin.registrationRequests')}
-                                </ResponsiveNavLink>
+                    {user && (
+                    <div className="border-t border-gray-700 px-4 pb-4 pt-3">
+                        <div className="mb-2 flex items-center text-sm font-medium text-gray-400">
+                            {user.name}
+                            {user.is_admin && pendingRegistrationCount > 0 && (
+                                <span className="ml-2 inline-flex items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-xs font-bold leading-none text-white">
+                                    {pendingRegistrationCount}
+                                </span>
                             )}
-                            <ResponsiveNavLink method="post" href={route('logout')} as="button">{t('nav.logOut')}</ResponsiveNavLink>
                         </div>
-                        </>
-                        )}
+                        <div className="space-y-1">
+                            <Link href={route('profile.edit')} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white">
+                                {t('nav.profile')}
+                            </Link>
+                            {user?.is_admin && (
+                                <Link href={route('admin.registration-requests.index')} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white">
+                                    {t('admin.registrationRequests')}
+                                </Link>
+                            )}
+                            <Link href={route('logout')} method="post" as="button" className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white">
+                                {t('nav.logOut')}
+                            </Link>
+                        </div>
                     </div>
+                    )}
                 </div>
             </nav>
 
