@@ -16,7 +16,6 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             AgeGroupSeeder::class,
-            MaterialSeeder::class,
         ]);
     }
 }
