@@ -1,8 +1,9 @@
 # Build frontend assets
 FROM node:22-alpine AS frontend
+RUN npm install -g npm@11
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm install --frozen-lockfile || npm install
+RUN npm ci
 COPY . .
 RUN npm run build
 
