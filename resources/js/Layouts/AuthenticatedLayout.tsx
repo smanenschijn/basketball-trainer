@@ -67,7 +67,7 @@ export default function Authenticated({ children }: PropsWithChildren) {
                         <div className="flex items-center sm:hidden">
                             <button
                                 onClick={() => setShowingNavigationDropdown(prev => !prev)}
-                                className="inline-flex items-center justify-center rounded-md p-2 text-brand-gold transition hover:bg-gray-800"
+                                className="inline-flex items-center justify-center rounded-md p-2 text-brand-gold transition hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
                                 aria-label="Toggle navigation"
                             >
                                 <svg className="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
@@ -176,7 +176,7 @@ export default function Authenticated({ children }: PropsWithChildren) {
                             <Link
                                 key={item.href}
                                 href={item.href}
-                                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-bold transition ${
+                                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-brand-gold ${
                                     item.active
                                         ? 'bg-brand-gold text-black'
                                         : 'text-brand-gold hover:bg-gray-800'
@@ -198,15 +198,15 @@ export default function Authenticated({ children }: PropsWithChildren) {
                             )}
                         </div>
                         <div className="space-y-1">
-                            <Link href={route('profile.edit')} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white">
+                            <Link href={route('profile.edit')} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-brand-gold">
                                 {t('nav.profile')}
                             </Link>
                             {user?.is_admin && (
-                                <Link href={route('admin.registration-requests.index')} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white">
+                                <Link href={route('admin.registration-requests.index')} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-brand-gold">
                                     {t('admin.registrationRequests')}
                                 </Link>
                             )}
-                            <Link href={route('logout')} method="post" as="button" className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white">
+                            <Link href={route('logout')} method="post" as="button" className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-brand-gold">
                                 {t('nav.logOut')}
                             </Link>
                         </div>
