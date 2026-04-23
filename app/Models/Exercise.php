@@ -76,6 +76,14 @@ class Exercise extends Model
         return $this->hasMany(ExerciseImage::class);
     }
 
+    public function plays(): BelongsToMany
+    {
+        return $this->belongsToMany(Play::class, 'exercise_play')
+            ->withPivot('sort_order')
+            ->withTimestamps()
+            ->orderByPivot('sort_order');
+    }
+
     /**
      * Sync materials by name, creating any that don't exist yet.
      *

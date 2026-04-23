@@ -38,6 +38,8 @@
         "dompurify": "^3.4.0",
         "i18next": "^26.0.5",
         "i18next-browser-languagedetector": "^8.2.1",
-        "react-i18next": "^17.0.4"
+        "konva": "^9.3.22",
+        "react-i18next": "^17.0.4",
+        "react-konva": "^18.2.14"
     }
 }

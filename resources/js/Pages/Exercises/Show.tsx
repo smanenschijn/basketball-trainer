@@ -1,14 +1,17 @@
 import ExerciseDialog from '@/Components/Exercises/ExerciseDialog';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Exercise, AgeGroup } from '@/types';
+import { Exercise, AgeGroup, Play } from '@/types';
 import { sanitizeHtml } from '@/utils/sanitize';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useMemo, useState } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+const PlayPreview = lazy(() => import('@/Components/Plays/PlayPreview'));
 
 interface Props {
     exercise: Exercise;
     ageGroups: AgeGroup[];
+    availablePlays: Pick<Play, 'id' | 'title' | 'court_type'>[];
 }
 
 const ArrowLeftIcon = () => (
@@ -55,10 +58,11 @@ function extractYouTubeId(url: string): string | null {
     return match?.[1] ?? null;
 }
 
-export default function Show({ exercise, ageGroups }: Props) {
+export default function Show({ exercise, ageGroups, availablePlays }: Props) {
     const { t } = useTranslation();
     const { auth } = usePage().props as { auth: { user: { is_admin: boolean } } };
     const [showEditDialog, setShowEditDialog] = useState(false);
+    const [selectedPlayId, setSelectedPlayId] = useState<number | ''>('');
     const ageLabels = exercise.age_groups?.map((ag) => ag.label).join(', ') || '-';
     const videoId = exercise.youtube_url ? extractYouTubeId(exercise.youtube_url) : null;
 
@@ -200,6 +204,91 @@ export default function Show({ exercise, ageGroups }: Props) {
                                 />
                             </div>
                         )}
+
+                        {/* Plays */}
+                        <div className="mt-8 border-3 border-brand-black bg-white p-6 shadow-brutal">
+                            <div className="mb-4 flex items-center justify-between">
+                                <h2 className="text-sm font-black uppercase tracking-wider text-brand-black">
+                                    {t('plays.attachedPlays')}
+                                </h2>
+                                {auth.user.is_admin && (
+                                    <Link
+                                        href={route('plays.create') + `?exercise_id=${exercise.id}`}
+                                        className="inline-flex items-center gap-1.5 border-3 border-brand-black bg-brand-gold px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-brand-black transition hover:bg-yellow-400"
+                                    >
+                                        + {t('plays.addPlay')}
+                                    </Link>
+                                )}
+                            </div>
+                            {auth.user.is_admin && availablePlays.length > 0 && (
+                                <div className="mb-4 flex items-center gap-2">
+                                    <select
+                                        value={selectedPlayId}
+                                        onChange={(e) => setSelectedPlayId(e.target.value ? Number(e.target.value) : '')}
+                                        className="flex-1 rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-700"
+                                    >
+                                        <option value="">{t('plays.selectPlay')}</option>
+                                        {availablePlays.map((p) => (
+                                            <option key={p.id} value={p.id}>
+                                                {p.title} ({p.court_type === 'half' ? t('plays.halfCourt') : t('plays.fullCourt')})
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        type="button"
+                                        disabled={selectedPlayId === ''}
+                                        onClick={() => {
+                                            router.post(
+                                                route('exercises.plays.attach', { exercise: exercise.slug, play: selectedPlayId }),
+                                                {},
+                                                { onSuccess: () => setSelectedPlayId('') },
+                                            );
+                                        }}
+                                        className="border-3 border-brand-black bg-brand-gold px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-brand-black transition hover:bg-yellow-400 disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                        {t('plays.attach')}
+                                    </button>
+                                </div>
+                            )}
+                            {exercise.plays && exercise.plays.length > 0 ? (
+                                <div className="space-y-6">
+                                    {exercise.plays.map((play) => (
+                                        <div key={play.id} className="border border-gray-200 rounded-lg p-4">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <div className="flex items-center gap-2">
+                                                    <Link
+                                                        href={route('plays.edit', play.id)}
+                                                        className="font-bold text-brand-black hover:underline"
+                                                    >
+                                                        {play.title}
+                                                    </Link>
+                                                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                                                        {play.court_type === 'half' ? t('plays.halfCourt') : t('plays.fullCourt')}
+                                                    </span>
+                                                </div>
+                                                {auth.user.is_admin && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => router.delete(route('exercises.plays.detach', { exercise: exercise.slug, play: play.id }))}
+                                                        className="text-xs font-medium text-red-600 hover:underline"
+                                                    >
+                                                        {t('plays.removePlay')}
+                                                    </button>
+                                                )}
+                                            </div>
+                                            <Suspense fallback={<div className="h-64 bg-gray-50 rounded animate-pulse" />}>
+                                                <PlayPreview
+                                                    canvasData={play.canvas_data}
+                                                    courtType={play.court_type}
+                                                />
+                                            </Suspense>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-sm text-gray-500">{t('plays.noPlaysAttached')}</p>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

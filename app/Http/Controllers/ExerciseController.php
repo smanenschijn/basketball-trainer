@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateExerciseRequest;
 use App\Models\AgeGroup;
 use App\Models\Exercise;
 use App\Models\Material;
+use App\Models\Play;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
@@ -50,11 +51,18 @@ class ExerciseController extends Controller
 
     public function show(Exercise $exercise)
     {
-        $exercise->load(['materials', 'ageGroups' => fn ($q) => $q->withPivot('is_framework')]);
+        $exercise->load([
+            'materials',
+            'ageGroups' => fn ($q) => $q->withPivot('is_framework'),
+            'plays',
+        ]);
 
         return Inertia::render('Exercises/Show', [
             'exercise' => $exercise,
             'ageGroups' => AgeGroup::orderBy('label')->get(['id', 'label']),
+            'availablePlays' => Play::whereNotIn('id', $exercise->plays->pluck('id'))
+                ->orderBy('title')
+                ->get(['id', 'title', 'court_type']),
         ]);
     }
 
@@ -80,5 +88,26 @@ class ExerciseController extends Controller
         );
 
         return back()->with('success', 'Exercise updated successfully.');
+    }
+
+    public function attachPlay(Exercise $exercise, Play $play)
+    {
+        Gate::authorize('update', $exercise);
+
+        $maxSort = $exercise->plays()->max('sort_order') ?? -1;
+        $exercise->plays()->syncWithoutDetaching([
+            $play->id => ['sort_order' => $maxSort + 1],
+        ]);
+
+        return back()->with('success', 'Play attached successfully.');
+    }
+
+    public function detachPlay(Exercise $exercise, Play $play)
+    {
+        Gate::authorize('update', $exercise);
+
+        $exercise->plays()->detach($play->id);
+
+        return back()->with('success', 'Play detached successfully.');
     }
 }

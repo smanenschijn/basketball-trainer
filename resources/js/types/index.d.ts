@@ -29,6 +29,7 @@ export interface Exercise {
     duration_minutes: number;
     materials: Material[];
     age_groups: AgeGroup[];
+    plays?: Play[];
     created_at: string;
     updated_at: string;
 }
@@ -74,6 +75,34 @@ export interface CalendarAssignment {
     id: number;
     date: string;
     session: CalendarSession;
+}
+
+export interface PlayPlayer {
+    id: string;
+    team: 'yellow' | 'red';
+    x: number;
+    y: number;
+    label: string;
+}
+
+export interface PlayLine {
+    id: string;
+    points: number[];
+    dashed: boolean;
+}
+
+export interface PlayCanvasData {
+    players: PlayPlayer[];
+    lines: PlayLine[];
+}
+
+export interface Play {
+    id: number;
+    title: string;
+    court_type: 'half' | 'full';
+    canvas_data: PlayCanvasData;
+    created_at: string;
+    updated_at: string;
 }
 
 export type PageProps<

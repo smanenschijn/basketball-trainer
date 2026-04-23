@@ -11,6 +11,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RegistrationRequestController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\TechnicalFrameworkController;
+use App\Http\Controllers\PlayController;
 use App\Http\Controllers\TrainingDayController;
 use Illuminate\Support\Facades\Route;
 
@@ -31,6 +32,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/exercises/{exercise}', [ExerciseController::class, 'show'])->name('exercises.show');
     Route::put('/exercises/{exercise}', [ExerciseController::class, 'update'])->name('exercises.update');
     Route::delete('/exercises/{exercise}', [ExerciseController::class, 'destroy'])->name('exercises.destroy');
+
+    Route::post('/exercises/{exercise}/plays/{play}', [ExerciseController::class, 'attachPlay'])->name('exercises.plays.attach');
+    Route::delete('/exercises/{exercise}/plays/{play}', [ExerciseController::class, 'detachPlay'])->name('exercises.plays.detach');
 
     Route::post('/uploads/exercise-images', [ExerciseImageController::class, 'store'])->name('exercise-images.store');
     Route::get('/api/materials', [MaterialController::class, 'index'])->name('materials.index');
@@ -55,6 +59,15 @@ Route::middleware('auth')->group(function () {
     Route::post('/sessions/{session}/exercises', [SessionController::class, 'addExercise'])->name('sessions.exercises.add');
     Route::delete('/sessions/{session}/exercises/{pivotId}', [SessionController::class, 'removeExercise'])->name('sessions.exercises.remove');
     Route::put('/sessions/{session}/exercises/reorder', [SessionController::class, 'reorderExercises'])->name('sessions.exercises.reorder');
+
+    // Plays
+    Route::get('/plays', [PlayController::class, 'index'])->name('plays.index');
+    Route::get('/plays/create', [PlayController::class, 'create'])->name('plays.create');
+    Route::post('/plays', [PlayController::class, 'store'])->name('plays.store');
+    Route::get('/plays/{play}', [PlayController::class, 'show'])->name('plays.show');
+    Route::get('/plays/{play}/edit', [PlayController::class, 'edit'])->name('plays.edit');
+    Route::put('/plays/{play}', [PlayController::class, 'update'])->name('plays.update');
+    Route::delete('/plays/{play}', [PlayController::class, 'destroy'])->name('plays.destroy');
 });
 
 Route::post('/register-request', [RegistrationRequestController::class, 'store'])
