@@ -8,7 +8,8 @@
     "confirm": "Confirm",
     "saving": "Saving...",
     "min": "min",
-    "comingSoon": "coming soon"
+    "comingSoon": "coming soon",
+    "loading": "Loading"
   },
   "nav": {
     "home": "Home",

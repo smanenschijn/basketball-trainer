@@ -253,16 +253,16 @@ export default function Show({ exercise, ageGroups, availablePlays }: Props) {
                             {exercise.plays && exercise.plays.length > 0 ? (
                                 <div className="space-y-6">
                                     {exercise.plays.map((play) => (
-                                        <div key={play.id} className="border border-gray-200 rounded-lg p-4">
-                                            <div className="flex items-center justify-between mb-3">
+                                        <div key={play.id} className="overflow-hidden border-2 border-brand-black">
+                                            <div className="flex items-center justify-between bg-brand-black px-4 py-2">
                                                 <div className="flex items-center gap-2">
                                                     <Link
-                                                        href={route('plays.edit', play.id)}
-                                                        className="font-bold text-brand-black hover:underline"
+                                                        href={route('plays.show', play.id)}
+                                                        className="text-sm font-bold uppercase tracking-wider text-brand-gold hover:underline"
                                                     >
                                                         {play.title}
                                                     </Link>
-                                                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                                                    <span className="text-xs text-gray-400">
                                                         {play.court_type === 'half' ? t('plays.halfCourt') : t('plays.fullCourt')}
                                                     </span>
                                                 </div>
@@ -270,13 +270,13 @@ export default function Show({ exercise, ageGroups, availablePlays }: Props) {
                                                     <button
                                                         type="button"
                                                         onClick={() => router.delete(route('exercises.plays.detach', { exercise: exercise.slug, play: play.id }))}
-                                                        className="text-xs font-medium text-red-600 hover:underline"
+                                                        className="text-xs font-bold uppercase tracking-wider text-red-400 hover:text-red-300 transition"
                                                     >
                                                         {t('plays.removePlay')}
                                                     </button>
                                                 )}
                                             </div>
-                                            <Suspense fallback={<div className="h-64 bg-gray-50 rounded animate-pulse" />}>
+                                            <Suspense fallback={<div className="h-64 bg-gray-50 animate-pulse" />}>
                                                 <PlayPreview
                                                     canvasData={play.canvas_data}
                                                     courtType={play.court_type}

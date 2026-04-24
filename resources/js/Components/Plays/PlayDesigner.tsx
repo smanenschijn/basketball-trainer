@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Stage, Layer, Circle, Arrow, Text, Group } from 'react-konva';
 import { useTranslation } from 'react-i18next';
 import Court, { getCourtHeight } from './Court';
@@ -13,7 +13,8 @@ interface PlayDesignerProps {
     readOnly?: boolean;
 }
 
-const COURT_WIDTH = 500;
+/** Canonical coordinate space width — all stored data uses this base. */
+const BASE_WIDTH = 500;
 const PLAYER_RADIUS = 20;
 
 type Tool = 'select' | 'draw';
@@ -27,14 +28,39 @@ export default function PlayDesigner({
 }: PlayDesignerProps) {
     const { t } = useTranslation();
     const stageRef = useRef<Konva.Stage>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
     const [tool, setTool] = useState<Tool>('select');
     const [drawTeam, setDrawTeam] = useState<'yellow' | 'red'>('yellow');
     const [dashedLine, setDashedLine] = useState(false);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [drawingLine, setDrawingLine] = useState<number[] | null>(null);
     const [undoStack, setUndoStack] = useState<PlayCanvasData[]>([]);
+    const [canvasWidth, setCanvasWidth] = useState(BASE_WIDTH);
 
-    const courtHeight = getCourtHeight(COURT_WIDTH, courtType);
+    // Measure container and update canvas width
+    useEffect(() => {
+        const el = containerRef.current;
+        if (!el) return;
+        const observer = new ResizeObserver((entries) => {
+            for (const entry of entries) {
+                setCanvasWidth(Math.floor(entry.contentRect.width));
+            }
+        });
+        observer.observe(el);
+        setCanvasWidth(Math.floor(el.getBoundingClientRect().width));
+        return () => observer.disconnect();
+    }, []);
+
+    const scale = canvasWidth / BASE_WIDTH;
+    const courtHeight = getCourtHeight(canvasWidth, courtType);
+    const baseCourtHeight = getCourtHeight(BASE_WIDTH, courtType);
+    const r = PLAYER_RADIUS * scale;
+
+    /** Convert screen position to canonical coordinates */
+    const toBase = useCallback((x: number, y: number) => ({
+        x: x / scale,
+        y: y / scale,
+    }), [scale]);
 
     const pushUndo = useCallback(() => {
         setUndoStack(prev => [...prev.slice(-20), { ...canvasData, players: [...canvasData.players], lines: [...canvasData.lines] }]);
@@ -53,8 +79,8 @@ export default function PlayDesigner({
         const newPlayer: PlayPlayer = {
             id: `p-${Date.now()}`,
             team,
-            x: COURT_WIDTH / 2 + (team === 'yellow' ? -40 : 40),
-            y: courtHeight / 2,
+            x: BASE_WIDTH / 2 + (team === 'yellow' ? -40 : 40),
+            y: baseCourtHeight / 2,
             label: String(existingCount + 1),
         };
         onChange({
@@ -63,17 +89,40 @@ export default function PlayDesigner({
         });
     };
 
-    const handlePlayerDragEnd = (id: string, x: number, y: number) => {
+    const handleLineDragEnd = (id: string, e: Konva.KonvaEventObject<DragEvent>) => {
         pushUndo();
+        const node = e.target;
+        const dx = node.x() / scale;
+        const dy = node.y() / scale;
+        // Reset node position (offset is baked into the points)
+        node.position({ x: 0, y: 0 });
         onChange({
             ...canvasData,
-            players: canvasData.players.map(p =>
-                p.id === id ? { ...p, x: Math.max(PLAYER_RADIUS, Math.min(COURT_WIDTH - PLAYER_RADIUS, x)), y: Math.max(PLAYER_RADIUS, Math.min(courtHeight - PLAYER_RADIUS, y)) } : p
+            lines: canvasData.lines.map(l =>
+                l.id === id ? {
+                    ...l,
+                    points: l.points.map((p, i) => p + (i % 2 === 0 ? dx : dy)),
+                } : l
             ),
         });
     };
 
-    const handleStageMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    const handlePlayerDragEnd = (id: string, screenX: number, screenY: number) => {
+        pushUndo();
+        const base = toBase(screenX, screenY);
+        onChange({
+            ...canvasData,
+            players: canvasData.players.map(p =>
+                p.id === id ? {
+                    ...p,
+                    x: Math.max(PLAYER_RADIUS, Math.min(BASE_WIDTH - PLAYER_RADIUS, base.x)),
+                    y: Math.max(PLAYER_RADIUS, Math.min(baseCourtHeight - PLAYER_RADIUS, base.y)),
+                } : p
+            ),
+        });
+    };
+
+    const handleDrawStart = () => {
         if (readOnly || tool !== 'draw') return;
         const stage = stageRef.current;
         if (!stage) return;
@@ -82,21 +131,23 @@ export default function PlayDesigner({
         setDrawingLine([pos.x, pos.y]);
     };
 
-    const handleStageMouseUp = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    const handleDrawEnd = () => {
         if (readOnly || tool !== 'draw' || !drawingLine) return;
         const stage = stageRef.current;
         if (!stage) return;
         const pos = stage.getPointerPosition();
         if (!pos) return;
 
-        // Only create line if it has meaningful length
         const dx = pos.x - drawingLine[0];
         const dy = pos.y - drawingLine[1];
-        if (Math.sqrt(dx * dx + dy * dy) > 10) {
+        if (Math.sqrt(dx * dx + dy * dy) > 10 * scale) {
             pushUndo();
+            // Convert to base coordinates for storage
+            const startBase = toBase(drawingLine[0], drawingLine[1]);
+            const endBase = toBase(pos.x, pos.y);
             const newLine: PlayLine = {
                 id: `l-${Date.now()}`,
-                points: [...drawingLine, pos.x, pos.y],
+                points: [startBase.x, startBase.y, endBase.x, endBase.y],
                 dashed: dashedLine,
             };
             onChange({
@@ -124,36 +175,138 @@ export default function PlayDesigner({
         }
     };
 
-    return (
-        <div className="flex flex-col gap-4">
-            {/* Toolbar */}
-            {!readOnly && (
-                <div className="flex flex-wrap items-center gap-2 rounded-lg bg-gray-100 p-3">
-                    {/* Court type toggle */}
-                    <div className="flex rounded-md border border-gray-300 overflow-hidden">
-                        <button
-                            type="button"
-                            onClick={() => onCourtTypeChange('half')}
-                            className={`px-3 py-1.5 text-sm font-medium ${courtType === 'half' ? 'bg-brand-black text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
-                        >
-                            {t('plays.halfCourt')}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => onCourtTypeChange('full')}
-                            className={`px-3 py-1.5 text-sm font-medium ${courtType === 'full' ? 'bg-brand-black text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
-                        >
-                            {t('plays.fullCourt')}
-                        </button>
-                    </div>
+    const canvas = (
+        <div ref={containerRef} className="overflow-hidden border-3 border-brand-black bg-gray-200">
+            {canvasWidth > 0 && (
+                <Stage
+                    ref={stageRef}
+                    width={canvasWidth}
+                    height={courtHeight}
+                    onMouseDown={handleDrawStart}
+                    onMouseUp={handleDrawEnd}
+                    onTouchStart={handleDrawStart}
+                    onTouchEnd={handleDrawEnd}
+                    onClick={handleStageClick}
+                    style={{ cursor: tool === 'draw' ? 'crosshair' : 'default' }}
+                >
+                    <Layer>
+                        <Court width={canvasWidth} courtType={courtType} />
+                    </Layer>
 
-                    <div className="mx-2 h-6 w-px bg-gray-300" />
+                    <Layer>
+                        {canvasData.lines.map((line) => (
+                            <Arrow
+                                key={line.id}
+                                points={line.points.map(p => p * scale)}
+                                stroke={selectedId === line.id ? '#3b82f6' : '#000000'}
+                                strokeWidth={Math.max(2, (selectedId === line.id ? 4 : 3) * scale)}
+                                fill={selectedId === line.id ? '#3b82f6' : '#000000'}
+                                pointerLength={Math.max(4, 10 * scale)}
+                                pointerWidth={Math.max(3, 8 * scale)}
+                                dash={line.dashed ? [10 * scale, 5 * scale] : undefined}
+                                draggable={!readOnly && tool === 'select'}
+                                onDragEnd={(e) => handleLineDragEnd(line.id, e)}
+                                onClick={() => !readOnly && setSelectedId(line.id)}
+                                onTap={() => !readOnly && setSelectedId(line.id)}
+                                hitStrokeWidth={15 * scale}
+                            />
+                        ))}
+                        {drawingLine && (
+                            <Arrow
+                                points={drawingLine}
+                                stroke="#666"
+                                strokeWidth={2 * scale}
+                                pointerLength={8 * scale}
+                                pointerWidth={6 * scale}
+                                dash={dashedLine ? [10 * scale, 5 * scale] : undefined}
+                                listening={false}
+                            />
+                        )}
+                    </Layer>
 
-                    {/* Add players */}
+                    <Layer>
+                        {canvasData.players.map((player) => (
+                            <Group
+                                key={player.id}
+                                x={player.x * scale}
+                                y={player.y * scale}
+                                draggable={!readOnly && tool === 'select'}
+                                onDragEnd={(e) => handlePlayerDragEnd(player.id, e.target.x(), e.target.y())}
+                                onClick={() => !readOnly && setSelectedId(player.id)}
+                                onTap={() => !readOnly && setSelectedId(player.id)}
+                            >
+                                {selectedId === player.id && (
+                                    <Circle
+                                        radius={r + 4 * scale}
+                                        stroke="#3b82f6"
+                                        strokeWidth={3 * scale}
+                                    />
+                                )}
+                                <Circle
+                                    radius={r}
+                                    fill={player.team === 'yellow' ? '#facc15' : '#ef4444'}
+                                    stroke={player.team === 'yellow' ? '#a16207' : '#991b1b'}
+                                    strokeWidth={2 * scale}
+                                />
+                                <Text
+                                    text={player.label}
+                                    fontSize={Math.max(8, 16 * scale)}
+                                    fontStyle="bold"
+                                    fill={player.team === 'yellow' ? '#000' : '#fff'}
+                                    align="center"
+                                    verticalAlign="middle"
+                                    width={r * 2}
+                                    height={r * 2}
+                                    offsetX={r}
+                                    offsetY={r}
+                                />
+                            </Group>
+                        ))}
+                    </Layer>
+                </Stage>
+            )}
+        </div>
+    );
+
+    if (readOnly) {
+        return canvas;
+    }
+
+    const controls = (
+        <div className="border-3 border-brand-black bg-white p-5 shadow-brutal">
+            {/* Court type */}
+            <div className="mb-5">
+                <h3 className="mb-2 text-xs font-black uppercase tracking-wider text-brand-black">
+                    {t('plays.courtType')}
+                </h3>
+                <div className="flex overflow-hidden border-2 border-brand-black">
+                    <button
+                        type="button"
+                        onClick={() => onCourtTypeChange('half')}
+                        className={`flex-1 px-3 py-2 text-xs font-bold uppercase tracking-wider ${courtType === 'half' ? 'bg-brand-black text-brand-gold' : 'bg-white text-brand-black hover:bg-gray-50'}`}
+                    >
+                        {t('plays.halfCourt')}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => onCourtTypeChange('full')}
+                        className={`flex-1 px-3 py-2 text-xs font-bold uppercase tracking-wider ${courtType === 'full' ? 'bg-brand-black text-brand-gold' : 'bg-white text-brand-black hover:bg-gray-50'}`}
+                    >
+                        {t('plays.fullCourt')}
+                    </button>
+                </div>
+            </div>
+
+            {/* Add players */}
+            <div className="mb-5">
+                <h3 className="mb-2 text-xs font-black uppercase tracking-wider text-brand-black">
+                    {t('plays.addPlayer')}
+                </h3>
+                <div className="flex gap-2">
                     <button
                         type="button"
                         onClick={() => addPlayer('yellow')}
-                        className="inline-flex items-center gap-1.5 rounded-md bg-yellow-400 px-3 py-1.5 text-sm font-medium text-black hover:bg-yellow-500"
+                        className="inline-flex flex-1 items-center justify-center gap-1.5 border-2 border-yellow-600 bg-yellow-400 px-3 py-2 text-xs font-bold uppercase tracking-wider text-black hover:bg-yellow-500"
                     >
                         <span className="h-3 w-3 rounded-full bg-yellow-600" />
                         + {t('plays.yellowTeam')}
@@ -161,21 +314,26 @@ export default function PlayDesigner({
                     <button
                         type="button"
                         onClick={() => addPlayer('red')}
-                        className="inline-flex items-center gap-1.5 rounded-md bg-red-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-600"
+                        className="inline-flex flex-1 items-center justify-center gap-1.5 border-2 border-red-700 bg-red-500 px-3 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-red-600"
                     >
                         <span className="h-3 w-3 rounded-full bg-red-700" />
                         + {t('plays.redTeam')}
                     </button>
+                </div>
+            </div>
 
-                    <div className="mx-2 h-6 w-px bg-gray-300" />
-
-                    {/* Tool selection */}
+            {/* Tools */}
+            <div className="mb-5">
+                <h3 className="mb-2 text-xs font-black uppercase tracking-wider text-brand-black">
+                    Tools
+                </h3>
+                <div className="flex flex-col gap-2">
                     <button
                         type="button"
                         onClick={() => setTool('select')}
-                        className={`rounded-md px-3 py-1.5 text-sm font-medium ${tool === 'select' ? 'bg-brand-black text-white' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'}`}
+                        className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold uppercase tracking-wider ${tool === 'select' ? 'bg-brand-black text-brand-gold' : 'border-2 border-brand-black bg-white text-brand-black hover:bg-gray-50'}`}
                     >
-                        <svg className="inline h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
                         </svg>
                         Select
@@ -183,9 +341,9 @@ export default function PlayDesigner({
                     <button
                         type="button"
                         onClick={() => setTool('draw')}
-                        className={`rounded-md px-3 py-1.5 text-sm font-medium ${tool === 'draw' ? 'bg-brand-black text-white' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'}`}
+                        className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold uppercase tracking-wider ${tool === 'draw' ? 'bg-brand-black text-brand-gold' : 'border-2 border-brand-black bg-white text-brand-black hover:bg-gray-50'}`}
                     >
-                        <svg className="inline h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                         </svg>
                         {t('plays.drawLine')}
@@ -195,20 +353,25 @@ export default function PlayDesigner({
                         <button
                             type="button"
                             onClick={() => setDashedLine(!dashedLine)}
-                            className={`rounded-md px-3 py-1.5 text-sm font-medium ${dashedLine ? 'bg-gray-700 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'}`}
+                            className={`px-3 py-2 text-xs font-bold uppercase tracking-wider ${dashedLine ? 'bg-gray-700 text-white' : 'border-2 border-brand-black bg-white text-brand-black hover:bg-gray-50'}`}
                         >
                             {dashedLine ? t('plays.dashedLine') : t('plays.solidLine')}
                         </button>
                     )}
+                </div>
+            </div>
 
-                    <div className="mx-2 h-6 w-px bg-gray-300" />
-
-                    {/* Actions */}
+            {/* Actions */}
+            <div>
+                <h3 className="mb-2 text-xs font-black uppercase tracking-wider text-brand-black">
+                    Actions
+                </h3>
+                <div className="flex gap-2">
                     <button
                         type="button"
                         onClick={handleDelete}
                         disabled={!selectedId}
-                        className="rounded-md bg-white px-3 py-1.5 text-sm font-medium text-red-600 border border-gray-300 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="flex-1 border-2 border-red-300 bg-white px-3 py-2 text-xs font-bold uppercase tracking-wider text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                         {t('plays.eraser')}
                     </button>
@@ -216,103 +379,21 @@ export default function PlayDesigner({
                         type="button"
                         onClick={handleUndo}
                         disabled={undoStack.length === 0}
-                        className="rounded-md bg-white px-3 py-1.5 text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="flex-1 border-2 border-brand-black bg-white px-3 py-2 text-xs font-bold uppercase tracking-wider text-brand-black hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                         {t('plays.undo')}
                     </button>
                 </div>
-            )}
-
-            {/* Canvas */}
-            <div className="overflow-auto rounded-lg border-2 border-gray-300 bg-gray-200 inline-block">
-                <Stage
-                    ref={stageRef}
-                    width={COURT_WIDTH}
-                    height={courtHeight}
-                    onMouseDown={handleStageMouseDown}
-                    onMouseUp={handleStageMouseUp}
-                    onClick={handleStageClick}
-                    style={{ cursor: tool === 'draw' ? 'crosshair' : 'default' }}
-                >
-                    {/* Court background */}
-                    <Layer>
-                        <Court width={COURT_WIDTH} courtType={courtType} />
-                    </Layer>
-
-                    {/* Lines layer */}
-                    <Layer>
-                        {canvasData.lines.map((line) => (
-                            <Arrow
-                                key={line.id}
-                                points={line.points}
-                                stroke={selectedId === line.id ? '#3b82f6' : '#000000'}
-                                strokeWidth={selectedId === line.id ? 4 : 3}
-                                fill={selectedId === line.id ? '#3b82f6' : '#000000'}
-                                pointerLength={10}
-                                pointerWidth={8}
-                                dash={line.dashed ? [10, 5] : undefined}
-                                onClick={() => !readOnly && setSelectedId(line.id)}
-                                onTap={() => !readOnly && setSelectedId(line.id)}
-                                hitStrokeWidth={15}
-                            />
-                        ))}
-                        {/* Drawing preview line */}
-                        {drawingLine && (
-                            <Arrow
-                                points={drawingLine}
-                                stroke="#666"
-                                strokeWidth={2}
-                                pointerLength={8}
-                                pointerWidth={6}
-                                dash={dashedLine ? [10, 5] : undefined}
-                                listening={false}
-                            />
-                        )}
-                    </Layer>
-
-                    {/* Players layer */}
-                    <Layer>
-                        {canvasData.players.map((player) => (
-                            <Group
-                                key={player.id}
-                                x={player.x}
-                                y={player.y}
-                                draggable={!readOnly && tool === 'select'}
-                                onDragEnd={(e) => handlePlayerDragEnd(player.id, e.target.x(), e.target.y())}
-                                onClick={() => !readOnly && setSelectedId(player.id)}
-                                onTap={() => !readOnly && setSelectedId(player.id)}
-                            >
-                                {/* Selection ring */}
-                                {selectedId === player.id && (
-                                    <Circle
-                                        radius={PLAYER_RADIUS + 4}
-                                        stroke="#3b82f6"
-                                        strokeWidth={3}
-                                    />
-                                )}
-                                <Circle
-                                    radius={PLAYER_RADIUS}
-                                    fill={player.team === 'yellow' ? '#facc15' : '#ef4444'}
-                                    stroke={player.team === 'yellow' ? '#a16207' : '#991b1b'}
-                                    strokeWidth={2}
-                                />
-                                <Text
-                                    text={player.label}
-                                    fontSize={16}
-                                    fontStyle="bold"
-                                    fill={player.team === 'yellow' ? '#000' : '#fff'}
-                                    align="center"
-                                    verticalAlign="middle"
-                                    width={PLAYER_RADIUS * 2}
-                                    height={PLAYER_RADIUS * 2}
-                                    offsetX={PLAYER_RADIUS}
-                                    offsetY={PLAYER_RADIUS}
-                                />
-                            </Group>
-                        ))}
-                    </Layer>
-                </Stage>
             </div>
+        </div>
+    );
+
+    return (
+        <div className={`grid grid-cols-1 gap-4 ${courtType === 'full' ? 'lg:grid-cols-[55fr_45fr]' : 'lg:grid-cols-[7fr_3fr]'}`}>
+            {/* Canvas — left on desktop, top on mobile */}
+            <div>{canvas}</div>
+            {/* Controls — right on desktop, bottom on mobile */}
+            <div>{controls}</div>
         </div>
     );
 }
