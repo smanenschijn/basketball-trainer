@@ -164,9 +164,22 @@ export default function Show({ exercise, ageGroups, availablePlays }: Props) {
                         {exercise.description && (
                             <p className="mt-4 text-gray-700">{exercise.description}</p>
                         )}
+
+                        {/* Instruction */}
+                        {exercise.explanation && (
+                            <div className="mt-6 border-3 border-brand-black bg-white p-6 shadow-brutal">
+                                <h2 className="mb-4 text-sm font-black uppercase tracking-wider text-brand-black">
+                                    {t('exercises.instruction')}
+                                </h2>
+                                <div
+                                    className="prose prose-sm max-w-none text-gray-700"
+                                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(exercise.explanation) }}
+                                />
+                            </div>
+                        )}
                     </div>
 
-                    {/* Right column: materials + instruction */}
+                    {/* Right column: materials + plays */}
                     <div>
                         {/* Materials */}
                         <div className="mb-8 border-3 border-brand-black bg-white p-6 shadow-brutal">
@@ -191,19 +204,6 @@ export default function Show({ exercise, ageGroups, availablePlays }: Props) {
                                 <p className="text-sm text-gray-500">{t('exercises.noMaterials')}</p>
                             )}
                         </div>
-
-                        {/* Instruction */}
-                        {exercise.explanation && (
-                            <div className="border-3 border-brand-black bg-white p-6 shadow-brutal">
-                                <h2 className="mb-4 text-sm font-black uppercase tracking-wider text-brand-black">
-                                    {t('exercises.instruction')}
-                                </h2>
-                                <div
-                                    className="prose prose-sm max-w-none text-gray-700"
-                                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(exercise.explanation) }}
-                                />
-                            </div>
-                        )}
 
                         {/* Plays */}
                         <div className="mt-8 border-3 border-brand-black bg-white p-6 shadow-brutal">
