@@ -91,12 +91,14 @@ export default function ExerciseDialog({
 
     return (
         <Modal show={show} onClose={handleClose} maxWidth="2xl">
-            <form onSubmit={submit} className="p-6">
-                <h2 className="text-xl font-bold uppercase tracking-wide text-gray-900">
-                    {isEditing ? t('exercises.editExercise') : t('exercises.addNewExercise')}
-                </h2>
+            <form onSubmit={submit} className="flex flex-col overflow-hidden">
+                <div className="flex-shrink-0 border-b border-gray-200 px-6 pt-6 pb-4">
+                    <h2 className="text-xl font-bold uppercase tracking-wide text-gray-900">
+                        {isEditing ? t('exercises.editExercise') : t('exercises.addNewExercise')}
+                    </h2>
+                </div>
 
-                <div className="mt-6 space-y-5">
+                <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
                     {/* Title */}
                     <div>
                         <InputLabel htmlFor="title" value={t('exercises.titleLabel')} />
@@ -289,7 +291,7 @@ export default function ExerciseDialog({
                 </div>
 
                 {/* Actions */}
-                <div className="mt-8 flex items-center justify-end gap-3">
+                <div className="flex-shrink-0 border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3">
                     <SecondaryButton type="button" onClick={handleClose}>
                         {t('common.cancel')}
                     </SecondaryButton>

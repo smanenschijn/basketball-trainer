@@ -41,12 +41,14 @@ export default function CreateSessionDialog({ show, onClose, ageGroups }: Props)
 
     return (
         <Modal show={show} onClose={handleClose} maxWidth="md">
-            <form onSubmit={submit} className="p-6">
-                <h2 className="text-lg font-black uppercase tracking-wider text-brand-black">
-                    {t('sessions.createSession')}
-                </h2>
+            <form onSubmit={submit} className="flex flex-col overflow-hidden">
+                <div className="flex-shrink-0 border-b border-gray-200 px-6 pt-6 pb-4">
+                    <h2 className="text-lg font-black uppercase tracking-wider text-brand-black">
+                        {t('sessions.createSession')}
+                    </h2>
+                </div>
 
-                <div className="mt-6 space-y-4">
+                <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
                     {/* Title */}
                     <div>
                         <InputLabel htmlFor="session-title" value={t('sessions.sessionName')} />
@@ -98,7 +100,7 @@ export default function CreateSessionDialog({ show, onClose, ageGroups }: Props)
                     </div>
                 </div>
 
-                <div className="mt-6 flex justify-end gap-3">
+                <div className="flex-shrink-0 border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
                     <SecondaryButton type="button" onClick={handleClose}>
                         {t('common.cancel')}
                     </SecondaryButton>
