@@ -98,6 +98,7 @@ export default function Index({ exercises, totalCount, filters, ageGroups, mater
             <ExerciseDialog
                 show={showDialog}
                 onClose={handleClose}
+                ageGroups={ageGroups}
             />
         </AuthenticatedLayout>
     );

@@ -1,5 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import ExerciseDialog from '@/Components/Exercises/ExerciseDialog';
+import { AgeGroup } from '@/types';
 import { Head, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +9,7 @@ interface DashboardProps {
     exerciseCount: number;
     sessionCount: number;
     totalTrainingMinutes: number;
+    ageGroups: AgeGroup[];
 }
 
 function StatCard({ title, value, subtitle, unit, icon }: { title: string; value: number; subtitle: string; unit?: string; icon: React.ReactNode }) {
@@ -77,7 +79,7 @@ const ChartIcon = () => (
     </svg>
 );
 
-export default function Dashboard({ exerciseCount, sessionCount, totalTrainingMinutes }: DashboardProps) {
+export default function Dashboard({ exerciseCount, sessionCount, totalTrainingMinutes, ageGroups }: DashboardProps) {
     const { t } = useTranslation();
     const [showAddExercise, setShowAddExercise] = useState(false);
 
@@ -160,6 +162,7 @@ export default function Dashboard({ exerciseCount, sessionCount, totalTrainingMi
                 <ExerciseDialog
                     show={showAddExercise}
                     onClose={() => setShowAddExercise(false)}
+                    ageGroups={ageGroups}
                 />
             </div>
         </AuthenticatedLayout>
