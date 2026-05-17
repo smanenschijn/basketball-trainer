@@ -252,4 +252,37 @@ class SessionTest extends TestCase
                 ->where('sessions.data.0.title', 'My Session')
             );
     }
+
+    // --- Print ---
+
+    public function test_user_can_view_print_page_for_own_session(): void
+    {
+        $user = User::factory()->create();
+        $session = $this->createSessionForUser($user);
+
+        $this->actingAs($user)
+            ->get(route('sessions.print', $session))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->component('Sessions/Print'));
+    }
+
+    public function test_user_cannot_view_print_page_for_other_users_session(): void
+    {
+        $user = User::factory()->create();
+        $other = User::factory()->create();
+        $session = $this->createSessionForUser($other);
+
+        $this->actingAs($user)
+            ->get(route('sessions.print', $session))
+            ->assertForbidden();
+    }
+
+    public function test_guest_cannot_access_print_page(): void
+    {
+        $user = User::factory()->create();
+        $session = $this->createSessionForUser($user);
+
+        $this->get(route('sessions.print', $session))
+            ->assertRedirect(route('login'));
+    }
 }

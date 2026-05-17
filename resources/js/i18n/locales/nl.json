@@ -200,7 +200,11 @@
     "selectExercise": "Selecteer een oefening",
     "selectExerciseDescription": "Klik op een oefening in de training om de details te bekijken",
     "fundamentalCount_one": "{{count}} basistechniek",
-    "fundamentalCount_other": "{{count}} basistechnieken"
+    "fundamentalCount_other": "{{count}} basistechnieken",
+    "printSession": "Training Printen",
+    "exerciseOverview": "Overzicht Oefeningen",
+    "requiredMaterials": "Benodigde Materialen",
+    "explanation": "Uitleg"
   },
   "calendar": {
     "title": "Kalender",

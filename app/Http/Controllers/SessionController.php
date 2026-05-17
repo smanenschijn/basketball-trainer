@@ -117,6 +117,17 @@ class SessionController extends Controller
         return back()->with('success', 'Exercise removed from session.');
     }
 
+    public function print(Session $session)
+    {
+        Gate::authorize('view', $session);
+
+        $session->load(['ageGroup', 'exercises.materials']);
+
+        return Inertia::render('Sessions/Print', [
+            'session' => $session,
+        ]);
+    }
+
     public function reorderExercises(Request $request, Session $session)
     {
         Gate::authorize('update', $session);

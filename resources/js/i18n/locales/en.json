@@ -200,7 +200,11 @@
     "selectExercise": "Select an exercise",
     "selectExerciseDescription": "Click on an exercise in the session to view its details",
     "fundamentalCount_one": "{{count}} fundamental",
-    "fundamentalCount_other": "{{count}} fundamentals"
+    "fundamentalCount_other": "{{count}} fundamentals",
+    "printSession": "Print Session",
+    "exerciseOverview": "Exercise Overview",
+    "requiredMaterials": "Required Materials",
+    "explanation": "Explanation"
   },
   "calendar": {
     "title": "Calendar",

@@ -58,6 +58,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/sessions/{session}', [SessionController::class, 'destroy'])->name('sessions.destroy');
     Route::post('/sessions/{session}/exercises', [SessionController::class, 'addExercise'])->name('sessions.exercises.add');
     Route::delete('/sessions/{session}/exercises/{pivotId}', [SessionController::class, 'removeExercise'])->name('sessions.exercises.remove');
+    Route::get('/sessions/{session}/print', [SessionController::class, 'print'])->name('sessions.print');
     Route::put('/sessions/{session}/exercises/reorder', [SessionController::class, 'reorderExercises'])->name('sessions.exercises.reorder');
 
     // Plays
