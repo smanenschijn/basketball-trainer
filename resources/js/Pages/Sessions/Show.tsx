@@ -380,7 +380,7 @@ export default function Show({ session, exercises, filters, ageGroups, materials
                         {t('sessions.backToSessions')}
                     </Link>
 
-                    <div className="flex items-start justify-between">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                             <h1 className="text-3xl font-black uppercase tracking-tight text-brand-black">
                                 {session.title}
