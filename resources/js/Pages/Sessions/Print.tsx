@@ -66,7 +66,7 @@ export default function Print({ session }: Props) {
                         className="mb-8 break-inside-avoid"
                     >
                         <h2 className="text-xl font-black uppercase tracking-tight">
-                            {index + 1}. {exercise.title}
+                            {index + 1}. {exercise.title} ({exercise.pivot.duration_override ?? exercise.duration_minutes} {t('common.min')})
                         </h2>
 
                         {/* Materials */}
