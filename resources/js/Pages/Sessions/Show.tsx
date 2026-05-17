@@ -1,7 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import Pagination from '@/Components/Pagination';
 import SlideOver from '@/Components/SlideOver';
-import { AgeGroup, Exercise, Material, PaginatedData, Session, SessionExercise } from '@/types';
+import { AgeGroup, Exercise, Material, PaginatedData, RotationGroup, Session, SessionExercise } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import {
     DndContext,
@@ -21,7 +21,7 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { sanitizeHtml } from '@/utils/sanitize';
 
@@ -37,6 +37,95 @@ interface Props {
     };
     ageGroups: AgeGroup[];
     materials: Material[];
+}
+
+// --- Inline duration editor ---
+function DurationEditor({
+    exercise,
+    sessionId,
+}: {
+    exercise: SessionExercise;
+    sessionId: number;
+}) {
+    const { t } = useTranslation();
+    const [editing, setEditing] = useState(false);
+    const [value, setValue] = useState(
+        String(exercise.pivot.duration_override ?? exercise.duration_minutes),
+    );
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        setValue(String(exercise.pivot.duration_override ?? exercise.duration_minutes));
+    }, [exercise.pivot.duration_override, exercise.duration_minutes]);
+
+    useEffect(() => {
+        if (editing) inputRef.current?.select();
+    }, [editing]);
+
+    const save = () => {
+        setEditing(false);
+        const parsed = parseInt(value, 10);
+        if (isNaN(parsed) || parsed < 1) {
+            setValue(String(exercise.pivot.duration_override ?? exercise.duration_minutes));
+            return;
+        }
+        const newOverride = parsed === exercise.duration_minutes ? null : parsed;
+        if (newOverride === exercise.pivot.duration_override) return;
+
+        router.put(
+            route('sessions.exercises.update', [sessionId, exercise.pivot.id]),
+            { duration_override: newOverride },
+            { preserveScroll: true },
+        );
+    };
+
+    const duration = exercise.pivot.duration_override ?? exercise.duration_minutes;
+    const isOverridden = exercise.pivot.duration_override !== null;
+
+    if (editing) {
+        return (
+            <div className="shrink-0 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                <input
+                    ref={inputRef}
+                    type="number"
+                    min={1}
+                    value={value}
+                    onChange={(e) => setValue(e.target.value)}
+                    onBlur={save}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') save();
+                        if (e.key === 'Escape') {
+                            setValue(String(exercise.pivot.duration_override ?? exercise.duration_minutes));
+                            setEditing(false);
+                        }
+                    }}
+                    className="w-14 border-2 border-brand-black bg-white px-1 py-0.5 text-center text-xs font-black text-brand-black focus:border-brand-gold focus:outline-none focus:ring-0"
+                />
+                <span className="text-xs font-black text-brand-black">{t('common.min')}</span>
+            </div>
+        );
+    }
+
+    return (
+        <button
+            type="button"
+            onClick={(e) => {
+                e.stopPropagation();
+                setEditing(true);
+            }}
+            title={
+                isOverridden
+                    ? t('sessions.defaultDuration', { minutes: exercise.duration_minutes })
+                    : t('sessions.editDuration')
+            }
+            className={`shrink-0 px-2 py-1 text-xs font-black text-brand-black transition hover:bg-yellow-400 ${
+                isOverridden ? 'bg-brand-gold ring-2 ring-brand-black/20' : 'bg-brand-gold'
+            }`}
+        >
+            {duration} {t('common.min')}
+            {isOverridden && <span className="ml-1 text-[10px] font-bold opacity-60">*</span>}
+        </button>
+    );
 }
 
 // --- Sortable exercise item in the session ---
@@ -96,9 +185,7 @@ function SortableSessionExercise({
                 </p>
             </div>
 
-            <span className="shrink-0 bg-brand-gold px-2 py-1 text-xs font-black text-brand-black">
-                {duration} {t('common.min')}
-            </span>
+            <DurationEditor exercise={exercise} sessionId={sessionId} />
 
             <button
                 type="button"
@@ -276,6 +363,242 @@ function ExerciseDetailPanel({ exercise }: { exercise: SessionExercise }) {
     );
 }
 
+// --- Rotation group block ---
+function RotationGroupBlock({
+    group,
+    sessionId,
+    selectedPivotId,
+    onSelectExercise,
+    onRemoveExercise,
+    onEdit,
+    onDelete,
+    onAddExercise,
+}: {
+    group: RotationGroup;
+    sessionId: number;
+    selectedPivotId: number | null;
+    onSelectExercise: (exercise: SessionExercise) => void;
+    onRemoveExercise: (rotationGroupId: number, pivotId: number) => void;
+    onEdit: () => void;
+    onDelete: () => void;
+    onAddExercise: () => void;
+}) {
+    const { t } = useTranslation();
+    const rotationCount = group.interval_minutes > 0 ? Math.floor(group.total_duration_minutes / group.interval_minutes) : 0;
+
+    return (
+        <div className="border-3 border-brand-black bg-blue-50 shadow-brutal-sm">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b-2 border-brand-black bg-blue-100 px-4 py-2">
+                <div className="flex items-center gap-3">
+                    <svg className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <div>
+                        <p className="text-sm font-black text-brand-black">
+                            {group.title || t('sessions.rotationGroup')}
+                        </p>
+                        <p className="text-xs text-gray-600">
+                            {t('sessions.rotationInterval', { minutes: group.interval_minutes })}
+                            {' · '}
+                            {t('sessions.rotationDuration', { minutes: group.total_duration_minutes })}
+                            {' · '}
+                            {t('sessions.rotationCount', { count: rotationCount })}
+                        </p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-1">
+                    <button
+                        type="button"
+                        onClick={onAddExercise}
+                        className="px-2 py-1 text-xs font-bold text-blue-600 hover:text-blue-800 transition"
+                        title={t('sessions.addToRotation')}
+                    >
+                        +
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onEdit}
+                        className="px-2 py-1 text-xs font-bold text-gray-500 hover:text-brand-black transition"
+                    >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                        </svg>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onDelete}
+                        className="px-2 py-1 text-xs font-bold text-gray-400 hover:text-red-600 transition"
+                    >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            {/* Stations */}
+            <div className="p-3 space-y-2">
+                {group.exercises.length > 0 ? (
+                    group.exercises.map((exercise, index) => (
+                        <div
+                            key={exercise.pivot.id}
+                            onClick={() => onSelectExercise(exercise)}
+                            className={`flex items-center gap-3 border-2 border-brand-black/30 bg-white p-2 cursor-pointer transition ${
+                                selectedPivotId === exercise.pivot.id ? 'ring-2 ring-brand-gold ring-offset-1' : 'hover:bg-gray-50'
+                            }`}
+                        >
+                            <span className="shrink-0 flex h-6 w-6 items-center justify-center border border-blue-300 bg-blue-100 text-xs font-black text-blue-700">
+                                {index + 1}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold text-brand-black truncate">{exercise.title}</p>
+                            </div>
+                            <span className="shrink-0 px-2 py-0.5 text-xs font-black text-brand-black bg-brand-gold">
+                                {group.interval_minutes} {t('common.min')}
+                            </span>
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onRemoveExercise(group.id, exercise.pivot.id);
+                                }}
+                                className="shrink-0 text-gray-400 hover:text-red-600 transition"
+                            >
+                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    ))
+                ) : (
+                    <div className="border-2 border-dashed border-gray-300 py-4 text-center">
+                        <p className="text-xs font-bold text-gray-400">{t('sessions.noStations')}</p>
+                        <p className="mt-1 text-xs text-gray-400">{t('sessions.noStationsDescription')}</p>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// --- Rotation group form modal ---
+function RotationFormModal({
+    show,
+    onClose,
+    sessionId,
+    editGroup,
+}: {
+    show: boolean;
+    onClose: () => void;
+    sessionId: number;
+    editGroup: RotationGroup | null;
+}) {
+    const { t } = useTranslation();
+    const [title, setTitle] = useState(editGroup?.title ?? '');
+    const [interval, setInterval] = useState(String(editGroup?.interval_minutes ?? 5));
+    const [totalDuration, setTotalDuration] = useState(String(editGroup?.total_duration_minutes ?? 20));
+
+    useEffect(() => {
+        setTitle(editGroup?.title ?? '');
+        setInterval(String(editGroup?.interval_minutes ?? 5));
+        setTotalDuration(String(editGroup?.total_duration_minutes ?? 20));
+    }, [editGroup, show]);
+
+    if (!show) return null;
+
+    const submit = (e: React.FormEvent) => {
+        e.preventDefault();
+        const data = {
+            title: title || null,
+            interval_minutes: parseInt(interval, 10),
+            total_duration_minutes: parseInt(totalDuration, 10),
+        };
+
+        if (editGroup) {
+            router.put(
+                route('sessions.rotation-groups.update', [sessionId, editGroup.id]),
+                data,
+                { preserveScroll: true, onSuccess: () => onClose() },
+            );
+        } else {
+            router.post(
+                route('sessions.rotation-groups.store', sessionId),
+                data,
+                { preserveScroll: true, onSuccess: () => onClose() },
+            );
+        }
+    };
+
+    const intervalNum = parseInt(interval, 10) || 0;
+    const totalNum = parseInt(totalDuration, 10) || 0;
+    const rotations = intervalNum > 0 ? Math.floor(totalNum / intervalNum) : 0;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
+            <div className="w-full max-w-md border-3 border-brand-black bg-white p-6 shadow-brutal" onClick={(e) => e.stopPropagation()}>
+                <h2 className="mb-4 text-lg font-black uppercase tracking-tight text-brand-black">
+                    {editGroup ? t('sessions.editRotation') : t('sessions.createRotation')}
+                </h2>
+                <form onSubmit={submit} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-bold text-brand-black">{t('sessions.rotationTitle')}</label>
+                        <input
+                            type="text"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            placeholder={t('sessions.rotationTitlePlaceholder')}
+                            className="mt-1 w-full border-3 border-brand-black bg-white px-3 py-2 text-sm font-semibold text-brand-black placeholder-gray-400 focus:border-brand-gold focus:outline-none focus:ring-0"
+                        />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-bold text-brand-black">{t('sessions.intervalMinutes')}</label>
+                            <input
+                                type="number"
+                                min={1}
+                                value={interval}
+                                onChange={(e) => setInterval(e.target.value)}
+                                className="mt-1 w-full border-3 border-brand-black bg-white px-3 py-2 text-sm font-semibold text-brand-black focus:border-brand-gold focus:outline-none focus:ring-0"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-brand-black">{t('sessions.totalDurationMinutes')}</label>
+                            <input
+                                type="number"
+                                min={1}
+                                value={totalDuration}
+                                onChange={(e) => setTotalDuration(e.target.value)}
+                                className="mt-1 w-full border-3 border-brand-black bg-white px-3 py-2 text-sm font-semibold text-brand-black focus:border-brand-gold focus:outline-none focus:ring-0"
+                            />
+                        </div>
+                    </div>
+                    {rotations > 0 && (
+                        <p className="text-sm text-gray-600">
+                            {t('sessions.rotationCount', { count: rotations })}
+                        </p>
+                    )}
+                    <div className="flex gap-3 pt-2">
+                        <button
+                            type="submit"
+                            className="flex-1 border-3 border-brand-black bg-brand-gold px-4 py-2 text-sm font-black uppercase tracking-wider text-brand-black transition hover:bg-yellow-400"
+                        >
+                            {editGroup ? t('common.save') : t('sessions.addRotation')}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="border-3 border-brand-black bg-white px-4 py-2 text-sm font-bold text-brand-black transition hover:bg-gray-50"
+                        >
+                            {t('common.cancel')}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
 export default function Show({ session, exercises, filters, ageGroups, materials }: Props) {
     const { t } = useTranslation();
     const [activeId, setActiveId] = useState<string | null>(null);
@@ -284,6 +607,9 @@ export default function Show({ session, exercises, filters, ageGroups, materials
     const [selectedExercise, setSelectedExercise] = useState<SessionExercise | null>(
         session.exercises.length > 0 ? session.exercises[0] : null,
     );
+    const [showRotationForm, setShowRotationForm] = useState(false);
+    const [editingRotation, setEditingRotation] = useState<RotationGroup | null>(null);
+    const [addingToRotation, setAddingToRotation] = useState<number | null>(null);
     const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
     const sensors = useSensors(
@@ -291,11 +617,33 @@ export default function Show({ session, exercises, filters, ageGroups, materials
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
     );
 
-    const totalUsed = session.exercises.reduce((sum, ex) => {
-        return sum + (ex.pivot.duration_override ?? ex.duration_minutes);
-    }, 0);
+    // Standalone exercises (not in any rotation group)
+    const standaloneExercises = session.exercises.filter((ex) => ex.pivot.rotation_group_id === null);
 
-    const sortableIds = session.exercises.map((ex) => `session-${ex.pivot.id}`);
+    // Total used time: standalone durations + rotation group totals
+    const totalUsed =
+        standaloneExercises.reduce((sum, ex) => sum + (ex.pivot.duration_override ?? ex.duration_minutes), 0) +
+        (session.rotation_groups ?? []).reduce((sum, rg) => sum + rg.total_duration_minutes, 0);
+
+    // Build unified timeline items sorted by sort_order
+    type TimelineItem =
+        | { type: 'exercise'; exercise: SessionExercise; sort_order: number }
+        | { type: 'rotation'; group: RotationGroup; sort_order: number };
+
+    const timeline: TimelineItem[] = [
+        ...standaloneExercises.map((ex) => ({
+            type: 'exercise' as const,
+            exercise: ex,
+            sort_order: ex.pivot.sort_order,
+        })),
+        ...(session.rotation_groups ?? []).map((rg) => ({
+            type: 'rotation' as const,
+            group: rg,
+            sort_order: rg.sort_order,
+        })),
+    ].sort((a, b) => a.sort_order - b.sort_order);
+
+    const sortableIds = standaloneExercises.map((ex) => `session-${ex.pivot.id}`);
 
     const handleDragStart = (event: DragStartEvent) => {
         setActiveId(String(event.active.id));
@@ -310,7 +658,7 @@ export default function Show({ session, exercises, filters, ageGroups, materials
         const newIndex = sortableIds.indexOf(String(over.id));
         if (oldIndex === -1 || newIndex === -1) return;
 
-        const reordered = [...session.exercises];
+        const reordered = [...standaloneExercises];
         const [moved] = reordered.splice(oldIndex, 1);
         reordered.splice(newIndex, 0, moved);
 
@@ -325,9 +673,17 @@ export default function Show({ session, exercises, filters, ageGroups, materials
     };
 
     const addExercise = (exerciseId: number) => {
-        router.post(route('sessions.exercises.add', session.id), {
-            exercise_id: exerciseId,
-        }, { preserveScroll: true });
+        if (addingToRotation !== null) {
+            router.post(
+                route('sessions.rotation-groups.exercises.add', [session.id, addingToRotation]),
+                { exercise_id: exerciseId },
+                { preserveScroll: true },
+            );
+        } else {
+            router.post(route('sessions.exercises.add', session.id), {
+                exercise_id: exerciseId,
+            }, { preserveScroll: true });
+        }
     };
 
     const removeExercise = (pivotId: number) => {
@@ -337,6 +693,16 @@ export default function Show({ session, exercises, filters, ageGroups, materials
         router.delete(route('sessions.exercises.remove', [session.id, pivotId]), {
             preserveScroll: true,
         });
+    };
+
+    const removeRotationExercise = (rotationGroupId: number, pivotId: number) => {
+        if (selectedExercise?.pivot.id === pivotId) {
+            setSelectedExercise(null);
+        }
+        router.delete(
+            route('sessions.rotation-groups.exercises.remove', [session.id, rotationGroupId, pivotId]),
+            { preserveScroll: true },
+        );
     };
 
     // Filter helpers
@@ -432,9 +798,18 @@ export default function Show({ session, exercises, filters, ageGroups, materials
                 <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
                     {/* Left: Session exercises */}
                     <div>
-                        <h2 className="mb-4 text-sm font-black uppercase tracking-widest text-gray-500">
-                            {t('sessions.sessionBuilder')} ({t('sessions.exerciseCount', { count: session.exercises.length })})
-                        </h2>
+                        <div className="mb-4 flex items-center justify-between">
+                            <h2 className="text-sm font-black uppercase tracking-widest text-gray-500">
+                                {t('sessions.sessionBuilder')} ({t('sessions.exerciseCount', { count: session.exercises.length })})
+                            </h2>
+                            <button
+                                type="button"
+                                onClick={() => setShowRotationForm(true)}
+                                className="border-2 border-brand-black bg-white px-3 py-1 text-xs font-black uppercase tracking-wider text-brand-black transition hover:bg-gray-50"
+                            >
+                                + {t('sessions.addRotation')}
+                            </button>
+                        </div>
 
                         <DndContext
                             sensors={sensors}
@@ -443,18 +818,42 @@ export default function Show({ session, exercises, filters, ageGroups, materials
                             onDragEnd={handleDragEnd}
                         >
                             <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
-                                {session.exercises.length > 0 ? (
+                                {timeline.length > 0 ? (
                                     <div className="space-y-3">
-                                        {session.exercises.map((exercise) => (
-                                            <SortableSessionExercise
-                                                key={exercise.pivot.id}
-                                                exercise={exercise}
-                                                sessionId={session.id}
-                                                isSelected={selectedExercise?.pivot.id === exercise.pivot.id}
-                                                onSelect={setSelectedExercise}
-                                                onRemove={removeExercise}
-                                            />
-                                        ))}
+                                        {timeline.map((item) =>
+                                            item.type === 'exercise' ? (
+                                                <SortableSessionExercise
+                                                    key={item.exercise.pivot.id}
+                                                    exercise={item.exercise}
+                                                    sessionId={session.id}
+                                                    isSelected={selectedExercise?.pivot.id === item.exercise.pivot.id}
+                                                    onSelect={setSelectedExercise}
+                                                    onRemove={removeExercise}
+                                                />
+                                            ) : (
+                                                <RotationGroupBlock
+                                                    key={`rotation-${item.group.id}`}
+                                                    group={item.group}
+                                                    sessionId={session.id}
+                                                    selectedPivotId={selectedExercise?.pivot.id ?? null}
+                                                    onSelectExercise={setSelectedExercise}
+                                                    onRemoveExercise={removeRotationExercise}
+                                                    onEdit={() => setEditingRotation(item.group)}
+                                                    onDelete={() => {
+                                                        if (confirm(t('sessions.deleteRotationConfirm'))) {
+                                                            router.delete(
+                                                                route('sessions.rotation-groups.destroy', [session.id, item.group.id]),
+                                                                { preserveScroll: true },
+                                                            );
+                                                        }
+                                                    }}
+                                                    onAddExercise={() => {
+                                                        setAddingToRotation(item.group.id);
+                                                        setLibraryOpen(true);
+                                                    }}
+                                                />
+                                            ),
+                                        )}
                                     </div>
                                 ) : (
                                     <div className="border-3 border-dashed border-gray-300 py-12 text-center">
@@ -501,8 +900,15 @@ export default function Show({ session, exercises, filters, ageGroups, materials
             {/* Slide-over: Exercise library */}
             <SlideOver
                 show={libraryOpen}
-                onClose={() => setLibraryOpen(false)}
-                title={t('sessions.exerciseLibrary')}
+                onClose={() => {
+                    setLibraryOpen(false);
+                    setAddingToRotation(null);
+                }}
+                title={
+                    addingToRotation !== null
+                        ? `${t('sessions.addToRotation')}: ${(session.rotation_groups ?? []).find((rg) => rg.id === addingToRotation)?.title || t('sessions.rotationGroup')}`
+                        : t('sessions.exerciseLibrary')
+                }
             >
                 {/* Filters */}
                 <div className="mb-4 space-y-3">
@@ -594,6 +1000,17 @@ export default function Show({ session, exercises, filters, ageGroups, materials
                 {/* Pagination */}
                 <Pagination links={exercises.links} lastPage={exercises.last_page} />
             </SlideOver>
+
+            {/* Rotation form modal */}
+            <RotationFormModal
+                show={showRotationForm || editingRotation !== null}
+                onClose={() => {
+                    setShowRotationForm(false);
+                    setEditingRotation(null);
+                }}
+                sessionId={session.id}
+                editGroup={editingRotation}
+            />
         </AuthenticatedLayout>
     );
 }

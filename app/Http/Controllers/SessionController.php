@@ -44,7 +44,7 @@ class SessionController extends Controller
     {
         Gate::authorize('view', $session);
 
-        $session->load(['ageGroup', 'exercises.materials', 'exercises.ageGroups']);
+        $session->load(['ageGroup', 'exercises.materials', 'exercises.ageGroups', 'rotationGroups.exercises.materials']);
 
         // Exercise library for the builder — pre-filtered by age group
         $filters = $request->only(['search', 'age_group_id', 'duration', 'material_id', 'is_framework']);
@@ -105,6 +105,22 @@ class SessionController extends Controller
         return back()->with('success', 'Exercise added to session.');
     }
 
+    public function updateExercise(Request $request, Session $session, int $pivotId)
+    {
+        Gate::authorize('update', $session);
+
+        $validated = $request->validate([
+            'duration_override' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        DB::table('session_exercises')
+            ->where('id', $pivotId)
+            ->where('session_id', $session->id)
+            ->update(['duration_override' => $validated['duration_override']]);
+
+        return back()->with('success', 'Exercise updated.');
+    }
+
     public function removeExercise(Session $session, int $pivotId)
     {
         Gate::authorize('update', $session);
@@ -121,7 +137,7 @@ class SessionController extends Controller
     {
         Gate::authorize('view', $session);
 
-        $session->load(['ageGroup', 'exercises.materials']);
+        $session->load(['ageGroup', 'exercises.materials', 'rotationGroups.exercises.materials']);
 
         return Inertia::render('Sessions/Print', [
             'session' => $session,

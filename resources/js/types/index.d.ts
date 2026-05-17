@@ -47,7 +47,20 @@ export interface SessionExercise extends Exercise {
         sort_order: number;
         duration_override: number | null;
         notes: string | null;
+        rotation_group_id: number | null;
     };
+}
+
+export interface RotationGroup {
+    id: number;
+    session_id: number;
+    title: string | null;
+    interval_minutes: number;
+    total_duration_minutes: number;
+    sort_order: number;
+    exercises: SessionExercise[];
+    created_at: string;
+    updated_at: string;
 }
 
 export interface Session {
@@ -58,6 +71,7 @@ export interface Session {
     age_group_id: number | null;
     age_group: AgeGroup | null;
     exercises: SessionExercise[];
+    rotation_groups: RotationGroup[];
     created_at: string;
     updated_at: string;
 }

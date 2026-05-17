@@ -7,11 +7,12 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExerciseController;
 use App\Http\Controllers\ExerciseImageController;
 use App\Http\Controllers\MaterialController;
+use App\Http\Controllers\PlayController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RegistrationRequestController;
+use App\Http\Controllers\RotationGroupController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\TechnicalFrameworkController;
-use App\Http\Controllers\PlayController;
 use App\Http\Controllers\TrainingDayController;
 use Illuminate\Support\Facades\Route;
 
@@ -57,9 +58,18 @@ Route::middleware('auth')->group(function () {
     Route::put('/sessions/{session}', [SessionController::class, 'update'])->name('sessions.update');
     Route::delete('/sessions/{session}', [SessionController::class, 'destroy'])->name('sessions.destroy');
     Route::post('/sessions/{session}/exercises', [SessionController::class, 'addExercise'])->name('sessions.exercises.add');
-    Route::delete('/sessions/{session}/exercises/{pivotId}', [SessionController::class, 'removeExercise'])->name('sessions.exercises.remove');
     Route::get('/sessions/{session}/print', [SessionController::class, 'print'])->name('sessions.print');
     Route::put('/sessions/{session}/exercises/reorder', [SessionController::class, 'reorderExercises'])->name('sessions.exercises.reorder');
+    Route::put('/sessions/{session}/exercises/{pivotId}', [SessionController::class, 'updateExercise'])->name('sessions.exercises.update');
+    Route::delete('/sessions/{session}/exercises/{pivotId}', [SessionController::class, 'removeExercise'])->name('sessions.exercises.remove');
+
+    // Rotation groups
+    Route::post('/sessions/{session}/rotation-groups', [RotationGroupController::class, 'store'])->name('sessions.rotation-groups.store');
+    Route::put('/sessions/{session}/rotation-groups/{rotationGroup}', [RotationGroupController::class, 'update'])->name('sessions.rotation-groups.update');
+    Route::delete('/sessions/{session}/rotation-groups/{rotationGroup}', [RotationGroupController::class, 'destroy'])->name('sessions.rotation-groups.destroy');
+    Route::post('/sessions/{session}/rotation-groups/{rotationGroup}/exercises', [RotationGroupController::class, 'addExercise'])->name('sessions.rotation-groups.exercises.add');
+    Route::delete('/sessions/{session}/rotation-groups/{rotationGroup}/exercises/{pivotId}', [RotationGroupController::class, 'removeExercise'])->name('sessions.rotation-groups.exercises.remove');
+    Route::put('/sessions/{session}/rotation-groups/{rotationGroup}/exercises/reorder', [RotationGroupController::class, 'reorderExercises'])->name('sessions.rotation-groups.exercises.reorder');
 
     // Plays
     Route::get('/plays', [PlayController::class, 'index'])->name('plays.index');
