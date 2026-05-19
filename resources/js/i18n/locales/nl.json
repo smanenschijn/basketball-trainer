@@ -226,7 +226,10 @@
     "rotationInterval": "{{minutes}} min per station",
     "rotationDuration": "{{minutes}} min totaal",
     "noStations": "Nog geen stations toegevoegd",
-    "noStationsDescription": "Voeg oefeningen uit de bibliotheek toe om stations te maken"
+    "noStationsDescription": "Voeg oefeningen uit de bibliotheek toe om stations te maken",
+    "editSession": "Training bewerken",
+    "description": "Beschrijving",
+    "descriptionPlaceholder": "Optionele notities over deze training"
   },
   "calendar": {
     "title": "Kalender",

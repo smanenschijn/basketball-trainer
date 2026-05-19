@@ -1,8 +1,14 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import InputError from '@/Components/InputError';
+import InputLabel from '@/Components/InputLabel';
+import Modal from '@/Components/Modal';
 import Pagination from '@/Components/Pagination';
+import PrimaryButton from '@/Components/PrimaryButton';
+import SecondaryButton from '@/Components/SecondaryButton';
 import SlideOver from '@/Components/SlideOver';
+import TextInput from '@/Components/TextInput';
 import { AgeGroup, Exercise, Material, PaginatedData, RotationGroup, Session, SessionExercise } from '@/types';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
     DndContext,
     DragOverlay,
@@ -21,10 +27,9 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { FormEventHandler, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { sanitizeHtml } from '@/utils/sanitize';
-import ExerciseDialog from '@/Components/Exercises/ExerciseDialog';
 
 interface Props {
     session: Session;
@@ -273,7 +278,7 @@ function TimeProgressBar({ used, target }: { used: number; target: number }) {
 }
 
 // --- Exercise detail panel ---
-function ExerciseDetailPanel({ exercise, onEdit }: { exercise: SessionExercise; onEdit: () => void }) {
+function ExerciseDetailPanel({ exercise }: { exercise: SessionExercise }) {
     const { t } = useTranslation();
     const videoId = exercise.youtube_url
         ? exercise.youtube_url.match(
@@ -299,19 +304,10 @@ function ExerciseDetailPanel({ exercise, onEdit }: { exercise: SessionExercise; 
                 </div>
             )}
 
-            {/* Title + Edit */}
-            <div className="flex items-center justify-between gap-3">
-                <h2 className="text-2xl font-black uppercase tracking-tight text-brand-black">
-                    {exercise.title}
-                </h2>
-                <button
-                    type="button"
-                    onClick={onEdit}
-                    className="shrink-0 border-3 border-brand-black bg-white px-3 py-1.5 text-xs font-black uppercase tracking-wider text-brand-black shadow-brutal-sm transition hover:bg-gray-50"
-                >
-                    {t('common.edit')}
-                </button>
-            </div>
+            {/* Title */}
+            <h2 className="text-2xl font-black uppercase tracking-tight text-brand-black">
+                {exercise.title}
+            </h2>
 
             {/* Metadata bar */}
             <div className="grid grid-cols-2 border-3 border-brand-black bg-brand-gold text-brand-black">
@@ -721,6 +717,139 @@ function RotationFormModal({
     );
 }
 
+// --- Edit session modal ---
+function EditSessionModal({
+    show,
+    onClose,
+    session,
+    ageGroups,
+}: {
+    show: boolean;
+    onClose: () => void;
+    session: Session;
+    ageGroups: AgeGroup[];
+}) {
+    const { t } = useTranslation();
+    const { data, setData, put, processing, errors, reset, setDefaults } = useForm({
+        title: session.title,
+        description: session.description ?? '',
+        duration_minutes: String(session.duration_minutes),
+        age_group_id: session.age_group_id ? String(session.age_group_id) : '',
+    });
+
+    useEffect(() => {
+        if (show) {
+            const values = {
+                title: session.title,
+                description: session.description ?? '',
+                duration_minutes: String(session.duration_minutes),
+                age_group_id: session.age_group_id ? String(session.age_group_id) : '',
+            };
+            setDefaults(values);
+            setData(values);
+        }
+    }, [show, session]);
+
+    const handleClose = () => {
+        reset();
+        onClose();
+    };
+
+    const submit: FormEventHandler = (e) => {
+        e.preventDefault();
+        put(route('sessions.update', session.id), {
+            onSuccess: () => handleClose(),
+        });
+    };
+
+    return (
+        <Modal show={show} onClose={handleClose} maxWidth="md">
+            <form onSubmit={submit} className="flex flex-col overflow-hidden">
+                <div className="flex-shrink-0 border-b border-gray-200 px-6 pt-6 pb-4">
+                    <h2 className="text-lg font-black uppercase tracking-wider text-brand-black">
+                        {t('sessions.editSession')}
+                    </h2>
+                </div>
+
+                <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+                    {/* Title */}
+                    <div>
+                        <InputLabel htmlFor="edit-session-title" value={t('sessions.sessionName')} />
+                        <TextInput
+                            id="edit-session-title"
+                            value={data.title}
+                            onChange={(e) => setData('title', e.target.value)}
+                            className="mt-1 block w-full"
+                            required
+                            autoFocus
+                        />
+                        <InputError message={errors.title} className="mt-2" />
+                    </div>
+
+                    {/* Description */}
+                    <div>
+                        <InputLabel htmlFor="edit-session-description" value={t('sessions.description')} />
+                        <textarea
+                            id="edit-session-description"
+                            value={data.description}
+                            onChange={(e) => setData('description', e.target.value)}
+                            maxLength={500}
+                            rows={3}
+                            className="mt-1 block w-full border-3 border-gray-300 px-3 py-2 text-sm shadow-brutal-sm transition focus:border-gray-800 focus:ring-0"
+                            placeholder={t('sessions.descriptionPlaceholder')}
+                        />
+                        <InputError message={errors.description} className="mt-2" />
+                    </div>
+
+                    {/* Duration */}
+                    <div>
+                        <InputLabel htmlFor="edit-session-duration" value={t('sessions.duration')} />
+                        <TextInput
+                            id="edit-session-duration"
+                            type="number"
+                            value={data.duration_minutes}
+                            onChange={(e) => setData('duration_minutes', e.target.value)}
+                            className="mt-1 block w-full"
+                            min="1"
+                            max="300"
+                            required
+                        />
+                        <InputError message={errors.duration_minutes} className="mt-2" />
+                    </div>
+
+                    {/* Age Group */}
+                    <div>
+                        <InputLabel htmlFor="edit-session-age-group" value={t('sessions.targetAgeGroup')} />
+                        <select
+                            id="edit-session-age-group"
+                            value={data.age_group_id}
+                            onChange={(e) => setData('age_group_id', e.target.value)}
+                            className="mt-1 block w-full border-3 border-brand-black bg-white px-3 py-2 text-sm shadow-brutal-sm focus:border-brand-black focus:ring-0"
+                        >
+                            <option value="">{t('filters.allAges')}</option>
+                            {ageGroups.map((ag) => (
+                                <option key={ag.id} value={ag.id}>
+                                    {ag.label}
+                                </option>
+                            ))}
+                        </select>
+                        <InputError message={errors.age_group_id} className="mt-2" />
+                    </div>
+                </div>
+
+                <div className="flex-shrink-0 border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
+                    <SecondaryButton type="button" onClick={handleClose}>
+                        {t('common.cancel')}
+                    </SecondaryButton>
+                    <PrimaryButton type="submit" disabled={processing}>
+                        {t('common.save')}
+                    </PrimaryButton>
+                </div>
+            </form>
+        </Modal>
+    );
+}
+
 export default function Show({ session, exercises, filters, ageGroups, materials }: Props) {
     const { t } = useTranslation();
     const [activeId, setActiveId] = useState<string | null>(null);
@@ -732,7 +861,7 @@ export default function Show({ session, exercises, filters, ageGroups, materials
     const [showRotationForm, setShowRotationForm] = useState(false);
     const [editingRotation, setEditingRotation] = useState<RotationGroup | null>(null);
     const [addingToRotation, setAddingToRotation] = useState<number | null>(null);
-    const [editingExercise, setEditingExercise] = useState<SessionExercise | null>(null);
+    const [editingSession, setEditingSession] = useState(false);
     const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
     const sensors = useSensors(
@@ -876,11 +1005,26 @@ export default function Show({ session, exercises, filters, ageGroups, materials
 
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div>
-                            <h1 className="text-3xl font-black uppercase tracking-tight text-brand-black">
-                                {session.title}
-                            </h1>
+                            <div className="flex items-center gap-3">
+                                <h1 className="text-3xl font-black uppercase tracking-tight text-brand-black">
+                                    {session.title}
+                                </h1>
+                                <button
+                                    type="button"
+                                    onClick={() => setEditingSession(true)}
+                                    className="shrink-0 text-brand-black/40 hover:text-brand-black transition"
+                                    title={t('sessions.editSession')}
+                                >
+                                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                                    </svg>
+                                </button>
+                            </div>
                             <p className="mt-1 text-sm text-gray-600">
                                 {session.age_group?.label ?? t('sessions.noAgeGroup')}
+                                {session.description && (
+                                    <> &middot; {session.description}</>
+                                )}
                             </p>
                         </div>
                         <div className="flex items-center gap-3">
@@ -1007,7 +1151,7 @@ export default function Show({ session, exercises, filters, ageGroups, materials
                     {/* Right: Exercise detail */}
                     <div>
                         {selectedExercise ? (
-                            <ExerciseDetailPanel exercise={selectedExercise} onEdit={() => setEditingExercise(selectedExercise)} />
+                            <ExerciseDetailPanel exercise={selectedExercise} />
                         ) : (
                             <div className="border-3 border-dashed border-gray-300 py-16 text-center">
                                 <svg className="mx-auto h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -1140,11 +1284,11 @@ export default function Show({ session, exercises, filters, ageGroups, materials
                 editGroup={editingRotation}
             />
 
-            {/* Exercise edit dialog */}
-            <ExerciseDialog
-                show={editingExercise !== null}
-                onClose={() => setEditingExercise(null)}
-                exercise={editingExercise}
+            {/* Edit session modal */}
+            <EditSessionModal
+                show={editingSession}
+                onClose={() => setEditingSession(false)}
+                session={session}
                 ageGroups={ageGroups}
             />
         </AuthenticatedLayout>

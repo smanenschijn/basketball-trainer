@@ -226,7 +226,10 @@
     "rotationInterval": "{{minutes}} min per station",
     "rotationDuration": "{{minutes}} min total",
     "noStations": "No stations added yet",
-    "noStationsDescription": "Add exercises from the library to create stations"
+    "noStationsDescription": "Add exercises from the library to create stations",
+    "editSession": "Edit Session",
+    "description": "Description",
+    "descriptionPlaceholder": "Optional notes about this session"
   },
   "calendar": {
     "title": "Calendar",
