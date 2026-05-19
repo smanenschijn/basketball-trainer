@@ -163,4 +163,33 @@ class SessionController extends Controller
 
         return back()->with('success', 'Exercises reordered.');
     }
+
+    public function reorderTimeline(Request $request, Session $session)
+    {
+        Gate::authorize('update', $session);
+
+        $validated = $request->validate([
+            'order' => ['required', 'array'],
+            'order.*.type' => ['required', 'in:exercise,rotation'],
+            'order.*.id' => ['required', 'integer'],
+            'order.*.sort_order' => ['required', 'integer', 'min:0'],
+        ]);
+
+        foreach ($validated['order'] as $item) {
+            if ($item['type'] === 'exercise') {
+                DB::table('session_exercises')
+                    ->where('id', $item['id'])
+                    ->where('session_id', $session->id)
+                    ->whereNull('rotation_group_id')
+                    ->update(['sort_order' => $item['sort_order']]);
+            } else {
+                DB::table('rotation_groups')
+                    ->where('id', $item['id'])
+                    ->where('session_id', $session->id)
+                    ->update(['sort_order' => $item['sort_order']]);
+            }
+        }
+
+        return back()->with('success', 'Timeline reordered.');
+    }
 }

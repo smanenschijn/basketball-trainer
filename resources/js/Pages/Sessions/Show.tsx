@@ -24,6 +24,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { sanitizeHtml } from '@/utils/sanitize';
+import ExerciseDialog from '@/Components/Exercises/ExerciseDialog';
 
 interface Props {
     session: Session;
@@ -272,7 +273,7 @@ function TimeProgressBar({ used, target }: { used: number; target: number }) {
 }
 
 // --- Exercise detail panel ---
-function ExerciseDetailPanel({ exercise }: { exercise: SessionExercise }) {
+function ExerciseDetailPanel({ exercise, onEdit }: { exercise: SessionExercise; onEdit: () => void }) {
     const { t } = useTranslation();
     const videoId = exercise.youtube_url
         ? exercise.youtube_url.match(
@@ -298,10 +299,19 @@ function ExerciseDetailPanel({ exercise }: { exercise: SessionExercise }) {
                 </div>
             )}
 
-            {/* Title */}
-            <h2 className="text-2xl font-black uppercase tracking-tight text-brand-black">
-                {exercise.title}
-            </h2>
+            {/* Title + Edit */}
+            <div className="flex items-center justify-between gap-3">
+                <h2 className="text-2xl font-black uppercase tracking-tight text-brand-black">
+                    {exercise.title}
+                </h2>
+                <button
+                    type="button"
+                    onClick={onEdit}
+                    className="shrink-0 border-3 border-brand-black bg-white px-3 py-1.5 text-xs font-black uppercase tracking-wider text-brand-black shadow-brutal-sm transition hover:bg-gray-50"
+                >
+                    {t('common.edit')}
+                </button>
+            </div>
 
             {/* Metadata bar */}
             <div className="grid grid-cols-2 border-3 border-brand-black bg-brand-gold text-brand-black">
@@ -364,6 +374,78 @@ function ExerciseDetailPanel({ exercise }: { exercise: SessionExercise }) {
 }
 
 // --- Rotation group block ---
+function SortableRotationExercise({
+    exercise,
+    index,
+    intervalMinutes,
+    selectedPivotId,
+    onSelectExercise,
+    onRemoveExercise,
+    rotationGroupId,
+}: {
+    exercise: SessionExercise;
+    index: number;
+    intervalMinutes: number;
+    selectedPivotId: number | null;
+    onSelectExercise: (exercise: SessionExercise) => void;
+    onRemoveExercise: (rotationGroupId: number, pivotId: number) => void;
+    rotationGroupId: number;
+}) {
+    const { t } = useTranslation();
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+        id: `rotation-${rotationGroupId}-${exercise.pivot.id}`,
+    });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={style}
+            onClick={() => onSelectExercise(exercise)}
+            className={`flex items-center gap-3 border-3 border-brand-black bg-white p-2 cursor-pointer transition ${
+                selectedPivotId === exercise.pivot.id ? 'ring-2 ring-brand-gold ring-offset-1' : 'hover:bg-gray-50'
+            }`}
+        >
+            <button
+                type="button"
+                className="cursor-grab touch-none text-gray-400 hover:text-brand-black"
+                {...attributes}
+                {...listeners}
+            >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 8h16M4 16h16" />
+                </svg>
+            </button>
+            <span className="shrink-0 flex h-6 w-6 items-center justify-center border-2 border-brand-black bg-brand-gold text-xs font-black text-brand-black">
+                {index + 1}
+            </span>
+            <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-brand-black truncate">{exercise.title}</p>
+            </div>
+            <span className="shrink-0 px-2 py-0.5 text-xs font-black text-brand-black bg-brand-gold">
+                {intervalMinutes} {t('common.min')}
+            </span>
+            <button
+                type="button"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onRemoveExercise(rotationGroupId, exercise.pivot.id);
+                }}
+                className="shrink-0 text-gray-400 hover:text-red-600 transition"
+            >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+    );
+}
+
 function RotationGroupBlock({
     group,
     sessionId,
@@ -386,11 +468,62 @@ function RotationGroupBlock({
     const { t } = useTranslation();
     const rotationCount = group.interval_minutes > 0 ? Math.floor(group.total_duration_minutes / group.interval_minutes) : 0;
 
+    const innerSensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    );
+
+    const innerSortableIds = group.exercises.map((ex) => `rotation-${group.id}-${ex.pivot.id}`);
+
+    const handleInnerDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (!over || active.id === over.id) return;
+
+        const oldIndex = innerSortableIds.indexOf(String(active.id));
+        const newIndex = innerSortableIds.indexOf(String(over.id));
+        if (oldIndex === -1 || newIndex === -1) return;
+
+        const reordered = [...group.exercises];
+        const [moved] = reordered.splice(oldIndex, 1);
+        reordered.splice(newIndex, 0, moved);
+
+        const order = reordered.map((ex, i) => ({
+            id: ex.pivot.id,
+            sort_order: i,
+        }));
+
+        router.put(
+            route('sessions.rotation-groups.exercises.reorder', [sessionId, group.id]),
+            { order },
+            { preserveScroll: true },
+        );
+    };
+
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+        id: `timeline-rotation-${group.id}`,
+    });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+    };
+
     return (
-        <div className="border-3 border-brand-black bg-white shadow-brutal-sm">
+        <div ref={setNodeRef} style={style} className="border-3 border-brand-black bg-white shadow-brutal-sm">
             {/* Header */}
             <div className="flex items-center justify-between border-b-3 border-brand-black bg-brand-gold px-4 py-2">
                 <div className="flex items-center gap-3">
+                    <button
+                        type="button"
+                        className="cursor-grab touch-none text-brand-black/60 hover:text-brand-black"
+                        {...attributes}
+                        {...listeners}
+                    >
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 8h16M4 16h16" />
+                        </svg>
+                    </button>
                     <svg className="h-5 w-5 text-brand-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
@@ -440,37 +573,26 @@ function RotationGroupBlock({
             {/* Stations */}
             <div className="p-3 space-y-2">
                 {group.exercises.length > 0 ? (
-                    group.exercises.map((exercise, index) => (
-                        <div
-                            key={exercise.pivot.id}
-                            onClick={() => onSelectExercise(exercise)}
-                            className={`flex items-center gap-3 border-3 border-brand-black bg-white p-2 cursor-pointer transition ${
-                                selectedPivotId === exercise.pivot.id ? 'ring-2 ring-brand-gold ring-offset-1' : 'hover:bg-gray-50'
-                            }`}
-                        >
-                            <span className="shrink-0 flex h-6 w-6 items-center justify-center border-2 border-brand-black bg-brand-gold text-xs font-black text-brand-black">
-                                {index + 1}
-                            </span>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm font-bold text-brand-black truncate">{exercise.title}</p>
-                            </div>
-                            <span className="shrink-0 px-2 py-0.5 text-xs font-black text-brand-black bg-brand-gold">
-                                {group.interval_minutes} {t('common.min')}
-                            </span>
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onRemoveExercise(group.id, exercise.pivot.id);
-                                }}
-                                className="shrink-0 text-gray-400 hover:text-red-600 transition"
-                            >
-                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
-                    ))
+                    <DndContext
+                        sensors={innerSensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleInnerDragEnd}
+                    >
+                        <SortableContext items={innerSortableIds} strategy={verticalListSortingStrategy}>
+                            {group.exercises.map((exercise, index) => (
+                                <SortableRotationExercise
+                                    key={exercise.pivot.id}
+                                    exercise={exercise}
+                                    index={index}
+                                    intervalMinutes={group.interval_minutes}
+                                    selectedPivotId={selectedPivotId}
+                                    onSelectExercise={onSelectExercise}
+                                    onRemoveExercise={onRemoveExercise}
+                                    rotationGroupId={group.id}
+                                />
+                            ))}
+                        </SortableContext>
+                    </DndContext>
                 ) : (
                     <div className="border-3 border-dashed border-gray-300 py-4 text-center">
                         <p className="text-xs font-bold text-gray-400">{t('sessions.noStations')}</p>
@@ -610,6 +732,7 @@ export default function Show({ session, exercises, filters, ageGroups, materials
     const [showRotationForm, setShowRotationForm] = useState(false);
     const [editingRotation, setEditingRotation] = useState<RotationGroup | null>(null);
     const [addingToRotation, setAddingToRotation] = useState<number | null>(null);
+    const [editingExercise, setEditingExercise] = useState<SessionExercise | null>(null);
     const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
     const sensors = useSensors(
@@ -643,7 +766,11 @@ export default function Show({ session, exercises, filters, ageGroups, materials
         })),
     ].sort((a, b) => a.sort_order - b.sort_order);
 
-    const sortableIds = standaloneExercises.map((ex) => `session-${ex.pivot.id}`);
+    const sortableIds = timeline.map((item) =>
+        item.type === 'exercise'
+            ? `session-${item.exercise.pivot.id}`
+            : `timeline-rotation-${item.group.id}`,
+    );
 
     const handleDragStart = (event: DragStartEvent) => {
         setActiveId(String(event.active.id));
@@ -658,16 +785,17 @@ export default function Show({ session, exercises, filters, ageGroups, materials
         const newIndex = sortableIds.indexOf(String(over.id));
         if (oldIndex === -1 || newIndex === -1) return;
 
-        const reordered = [...standaloneExercises];
+        const reordered = [...timeline];
         const [moved] = reordered.splice(oldIndex, 1);
         reordered.splice(newIndex, 0, moved);
 
-        const order = reordered.map((ex, i) => ({
-            id: ex.pivot.id,
+        const order = reordered.map((item, i) => ({
+            type: item.type === 'exercise' ? 'exercise' : 'rotation',
+            id: item.type === 'exercise' ? item.exercise.pivot.id : item.group.id,
             sort_order: i,
         }));
 
-        router.put(route('sessions.exercises.reorder', session.id), { order }, {
+        router.put(route('sessions.timeline.reorder', session.id), { order }, {
             preserveScroll: true,
         });
     };
@@ -879,7 +1007,7 @@ export default function Show({ session, exercises, filters, ageGroups, materials
                     {/* Right: Exercise detail */}
                     <div>
                         {selectedExercise ? (
-                            <ExerciseDetailPanel exercise={selectedExercise} />
+                            <ExerciseDetailPanel exercise={selectedExercise} onEdit={() => setEditingExercise(selectedExercise)} />
                         ) : (
                             <div className="border-3 border-dashed border-gray-300 py-16 text-center">
                                 <svg className="mx-auto h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -1010,6 +1138,14 @@ export default function Show({ session, exercises, filters, ageGroups, materials
                 }}
                 sessionId={session.id}
                 editGroup={editingRotation}
+            />
+
+            {/* Exercise edit dialog */}
+            <ExerciseDialog
+                show={editingExercise !== null}
+                onClose={() => setEditingExercise(null)}
+                exercise={editingExercise}
+                ageGroups={ageGroups}
             />
         </AuthenticatedLayout>
     );

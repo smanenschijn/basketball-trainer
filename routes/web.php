@@ -60,6 +60,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/sessions/{session}/exercises', [SessionController::class, 'addExercise'])->name('sessions.exercises.add');
     Route::get('/sessions/{session}/print', [SessionController::class, 'print'])->name('sessions.print');
     Route::put('/sessions/{session}/exercises/reorder', [SessionController::class, 'reorderExercises'])->name('sessions.exercises.reorder');
+    Route::put('/sessions/{session}/timeline/reorder', [SessionController::class, 'reorderTimeline'])->name('sessions.timeline.reorder');
     Route::put('/sessions/{session}/exercises/{pivotId}', [SessionController::class, 'updateExercise'])->name('sessions.exercises.update');
     Route::delete('/sessions/{session}/exercises/{pivotId}', [SessionController::class, 'removeExercise'])->name('sessions.exercises.remove');
 
